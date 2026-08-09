@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>United Front Planner — Etheria Restart</title>
+<meta name="description" content="Assign guild members to United Front nodes, then export the finished board as an image.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <h1>United&nbsp;Front<br><span>Planner</span></h1>
+    <p class="brand-sub">Etheria Restart</p>
+  </div>
+
+  <div class="topbar-tools">
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" hidden>
+    <output class="load-state" id="load-state">Loading roster…</output>
+    <button type="button" class="link-btn" id="btn-pick" hidden>Load a file instead</button>
+    <label class="toggle">
+      <input type="checkbox" id="outline-toggle">
+      <span>Outline nodes</span>
+    </label>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- ============ PLANNER ============ -->
+  <section class="stage">
+    <div id="planner">
+      <!-- The map. Never edited, never recoloured. The src is set by
+           script.js so it can fall back to other paths if one 404s. -->
+      <img id="planner-img" alt="United Front map with colour-coded nodes">
+      <div class="map-error" id="map-error" hidden>
+        <h3>Map image didn't load</h3>
+        <p id="map-error-paths"></p>
+        <p class="map-error-hint">Check the file is pushed, and that the name matches exactly — GitHub Pages is case-sensitive.</p>
+        <button type="button" class="link-btn" id="btn-pick-map">Pick the image from this device</button>
+        <input type="file" id="map-input" accept="image/*" hidden>
+      </div>
+      <!-- Transparent drop zones are injected here by script.js -->
+    </div>
+    <p class="stage-hint" id="stage-hint">Pick a member, then tap a node. Or drag a name straight onto the map.</p>
+    <p class="stage-hint sub">On a phone the map scrolls sideways.</p>
+  </section>
+
+  <!-- ============ ROSTER ============ -->
+  <aside class="roster" id="roster-panel">
+    <div class="roster-head">
+      <h2>Members</h2>
+      <p class="counts">
+        <span id="count-loaded">0</span> loaded ·
+        <span id="count-assigned">0</span> assigned ·
+        <span id="count-open">0</span> unassigned
+      </p>
+      <div class="meter"><i id="meter-fill" style="width:0%"></i></div>
+      <p class="meter-label">Assigned <span id="ratio">0 / 0</span> · <span id="nodes-free">30</span> nodes open</p>
+      <input type="search" id="search" placeholder="Search member…" autocomplete="off" aria-label="Search members">
+    </div>
+
+    <ol class="member-list" id="member-list"></ol>
+
+    <p class="empty-note" id="empty-note">
+      No roster yet. <b>Member.xlsx</b> should sit next to <b>index.html</b> with <b>ID</b>, <b>RTA Score</b> and <b>Rank</b> columns.
+    </p>
+
+    <div class="roster-foot">
+      <button type="button" class="btn btn-ghost" id="btn-reset">Reset</button>
+      <button type="button" class="btn btn-primary" id="btn-export">Export image</button>
+      <button type="button" class="btn btn-quiet" id="btn-clear">Clear saved data</button>
+    </div>
+  </aside>
+</main>
+
+<!-- ============ CONFIRM DIALOG ============ -->
+<div class="modal-scrim" id="modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <h3 id="modal-title">Reset all assignments?</h3>
+    <p id="modal-body">Every member returns to the roster. The map itself is untouched.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="modal-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="modal-ok">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- SheetJS reads the workbook entirely in the browser. No server, no build step. -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
