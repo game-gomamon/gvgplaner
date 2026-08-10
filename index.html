@@ -131,7 +131,19 @@
   "use strict";
   if (typeof window.fetch !== "function") return;
 
-  var NS    = "etheria-restart-gomamon";                 // change if you fork the site
+  var NS    = "game-gomamon.github.io";                 // change if you fork the site
+
+  /* PAGE identifies THIS url. Counts and the "already counted" flags are both
+     keyed by it, so every page gets its own tally and one person browsing
+     several pages is counted once per page instead of once per site. */
+  var PAGE  = (function(){
+    var s = (location.hostname + location.pathname)
+              .replace(/index\.html?$/i, "")
+              .replace(/[^a-zA-Z0-9]+/g, "-")
+              .replace(/^-+|-+$/g, "")
+              .toLowerCase();
+    return s.slice(0, 38) || "root";
+  })();
   var HOSTS = ["https://abacus.jasoncameron.dev", "https://abacus.jsn.cam"];
 
   function pad(n){ return (n < 10 ? "0" : "") + n; }
@@ -194,9 +206,9 @@
   function run(){
     var now = new Date(), day = dayKey(now), week = weekKey(now);
     Promise.all([
-      track("visitors-day-" + day,  day,   "vc.seen.day"),
-      track("visitors-week-" + week, week, "vc.seen.week"),
-      track("visitors-total",        "all", "vc.seen.total")
+      track("v-" + PAGE + "-d-" + day,   day,  "vc.seen.day."   + PAGE),
+      track("v-" + PAGE + "-w-" + week,  week, "vc.seen.week."  + PAGE),
+      track("v-" + PAGE + "-total",      "all","vc.seen.total." + PAGE)
     ]).then(function(v){
       var box = document.getElementById("site-visitor-stats");
       paint("vc-today", v[0]); paint("vc-week", v[1]); paint("vc-all", v[2]);
