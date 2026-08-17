@@ -1,0 +1,579 @@
+/* =========================================================
+   Etheria Restart — United Front
+   Design: dark heraldic ledger.
+   Ink-navy field, brass hairlines, parchment type.
+   House colour appears only as a sigil edge or badge dot,
+   never as a fill, so the numbers stay the loudest thing.
+   ========================================================= */
+
+:root {
+  /* field */
+  --ink:        #0B0F1C;
+  --ink-2:      #0F1526;
+  --panel:      #131A2D;
+  --panel-2:    #182140;
+  --line:       #232C48;
+  --line-soft:  #1A2237;
+
+  /* type */
+  --text:       #E9E6DC;
+  --text-dim:   #B6BCCE;
+  --muted:      #8992AC;
+
+  /* accent — aged brass, hairlines and markers only */
+  --brass:      #C6A15B;
+  --brass-dim:  #6E5A31;
+
+  /* outcome */
+  --win:        #6FCBA4;
+  --loss:       #97A0BA;
+
+  /* houses */
+  --house-white:  #E7E9F2;
+  --house-purple: #9E6BEA;
+  --house-yellow: #E7C04A;
+  --house-red:    #D95145;
+  --house-none:   #5C6684;
+
+  --radius:  10px;
+  --radius-s: 6px;
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body:    "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --wrap: 1180px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1100px 620px at 50% -12%, #1A2340 0%, rgba(26,35,64,0) 62%),
+    var(--ink);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+
+a { color: inherit; }
+
+button, input, select { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.skip-link {
+  position: absolute; left: 12px; top: -60px; z-index: 40;
+  background: var(--panel-2); color: var(--text);
+  padding: 10px 14px; border: 1px solid var(--brass); border-radius: var(--radius-s);
+  text-decoration: none; transition: top .15s ease;
+}
+.skip-link:focus { top: 12px; }
+
+/* ---------------------------------------------------------
+   Masthead
+   --------------------------------------------------------- */
+
+.masthead {
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(19,26,45,.92), rgba(11,15,28,.72));
+  backdrop-filter: blur(8px);
+  position: sticky; top: 0; z-index: 20;
+}
+
+.masthead__inner {
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.brand { display: flex; align-items: center; gap: 12px; margin-right: auto; }
+
+.brand__sigil { width: 30px; height: 34px; color: var(--brass); flex: none; }
+.sig-white  { fill: var(--house-white); }
+.sig-purple { fill: var(--house-purple); }
+.sig-yellow { fill: var(--house-yellow); }
+.sig-red    { fill: var(--house-red); }
+
+.brand__eyebrow {
+  margin: 0;
+  font-family: var(--font-data);
+  font-size: 10px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+.brand__title { font-size: 21px; line-height: 1.1; }
+
+.nav { display: flex; gap: 2px; flex-wrap: wrap; }
+
+.nav__link {
+  text-decoration: none;
+  color: var(--muted);
+  padding: 7px 13px;
+  border-radius: var(--radius-s);
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.nav__link:hover { color: var(--text); background: rgba(198,161,91,.07); }
+.nav__link.is-active {
+  color: var(--text);
+  border-color: var(--brass-dim);
+  background: rgba(198,161,91,.11);
+}
+
+/* status chip */
+.chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-size: 12.5px;
+  cursor: pointer;
+  font-family: var(--font-data);
+}
+.chip:hover { border-color: var(--brass-dim); color: var(--text); }
+.chip__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--win); flex: none; }
+.chip--warn .chip__dot { background: var(--house-yellow); }
+.chip--error .chip__dot { background: var(--house-red); }
+
+.issues {
+  border-top: 1px solid var(--line);
+  background: var(--ink-2);
+  max-height: 46vh;
+  overflow: auto;
+}
+.issues__inner { max-width: var(--wrap); margin: 0 auto; padding: 18px 20px 22px; }
+.issues__title { font-size: 15px; margin-bottom: 4px; }
+.issues__lede { color: var(--muted); font-size: 13.5px; margin: 0 0 12px; }
+.issues__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.issues__list li {
+  display: grid; grid-template-columns: 64px 1fr; gap: 12px;
+  font-size: 13.5px; color: var(--text-dim);
+  border-left: 2px solid var(--line); padding-left: 12px;
+}
+.issues__list li.is-error { border-left-color: var(--house-red); }
+.issues__list li.is-warn  { border-left-color: var(--house-yellow); }
+.issues__tag {
+  font-family: var(--font-data); font-size: 10.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted); padding-top: 2px;
+}
+
+/* ---------------------------------------------------------
+   Layout
+   --------------------------------------------------------- */
+
+main { max-width: var(--wrap); margin: 0 auto; padding: 30px 20px 64px; }
+
+.view__head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 22px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  font-family: var(--font-data);
+  font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--brass);
+}
+
+.view__title { font-size: clamp(26px, 4vw, 34px); line-height: 1.05; }
+
+.week-picker { display: flex; align-items: center; gap: 10px; }
+.week-picker label {
+  font-family: var(--font-data); font-size: 11px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.control {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: var(--radius-s);
+  padding: 9px 12px;
+  min-width: 0;
+  width: 100%;
+}
+.control:hover { border-color: var(--brass-dim); }
+.control--select {
+  appearance: none;
+  padding-right: 34px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--brass) 50%), linear-gradient(135deg, var(--brass) 50%, transparent 50%);
+  background-position: right 15px center, right 10px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  width: auto;
+  font-family: var(--font-data);
+}
+
+/* ---------------------------------------------------------
+   Stat strip
+   --------------------------------------------------------- */
+
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+
+.stat {
+  background: var(--panel);
+  padding: 15px 17px 16px;
+}
+.stat__label {
+  margin: 0 0 6px;
+  font-family: var(--font-data);
+  font-size: 10.5px; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--muted);
+}
+.stat__value {
+  font-family: var(--font-display);
+  font-size: 26px; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.stat__sub { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); font-family: var(--font-data); }
+
+/* ---------------------------------------------------------
+   House strip — the signature device.
+   A week's roster read as a heraldic banner.
+   --------------------------------------------------------- */
+
+.house-strip { margin: 0 0 24px; }
+.house-strip__label {
+  margin: 0 0 8px;
+  font-family: var(--font-data);
+  font-size: 10.5px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted);
+}
+.house-strip__bar {
+  display: flex; height: 10px; border-radius: 3px; overflow: hidden;
+  border: 1px solid var(--line);
+}
+.house-strip__bar span { display: block; height: 100%; }
+.house-strip__bar span[data-squad="1"] {
+  background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.42) 0 3px, transparent 3px 7px);
+}
+.house-strip__legend {
+  list-style: none; margin: 10px 0 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 8px 20px;
+  font-family: var(--font-data); font-size: 12px; color: var(--text-dim);
+}
+.house-strip__legend li { display: flex; align-items: center; gap: 7px; }
+.house-strip__legend b { font-weight: 500; color: var(--text); }
+.house-strip__legend small { color: var(--muted); }
+
+/* ---------------------------------------------------------
+   Toolbar
+   --------------------------------------------------------- */
+
+.toolbar {
+  display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.field { display: grid; gap: 5px; }
+.field--grow { flex: 1 1 240px; }
+.field__label {
+  font-family: var(--font-data); font-size: 10.5px; letter-spacing: .15em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.toggle { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-dim); cursor: pointer; padding-bottom: 9px; }
+.toggle input { accent-color: var(--brass); width: 15px; height: 15px; }
+
+/* ---------------------------------------------------------
+   Tables
+   --------------------------------------------------------- */
+
+.table-wrap {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  background: var(--panel);
+}
+
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+.table thead th {
+  position: sticky; top: 0;
+  background: var(--panel-2);
+  text-align: left;
+  font-family: var(--font-data);
+  font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  padding: 0;
+}
+.table thead th.num { text-align: right; }
+.table thead th button {
+  background: none; border: 0; cursor: pointer;
+  padding: 11px 14px; width: 100%; text-align: inherit;
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
+}
+.table thead th button:hover { color: var(--text); }
+.table thead th[aria-sort="ascending"] button::after  { content: " ↑"; color: var(--brass); }
+.table thead th[aria-sort="descending"] button::after { content: " ↓"; color: var(--brass); }
+.table thead th.col-rank { padding: 11px 6px 11px 16px; width: 46px; }
+
+.table tbody td { padding: 11px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+.table tbody tr:last-child td { border-bottom: 0; }
+.table tbody tr { cursor: pointer; }
+.table tbody tr:hover { background: rgba(198,161,91,.055); }
+.table tbody tr:focus-within { background: rgba(198,161,91,.08); }
+.table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.col-rank {
+  font-family: var(--font-data); color: var(--muted); font-size: 12px;
+  padding-left: 16px !important; padding-right: 6px !important;
+  border-left: 3px solid transparent;
+}
+/* ^= so a squad ("Purple*") takes its parent house's colour without
+   needing its own rule. Add a new *house* here, not a new squad. */
+tr[data-house^="White"]  .col-rank { border-left-color: var(--house-white); }
+tr[data-house^="Purple"] .col-rank { border-left-color: var(--house-purple); }
+tr[data-house^="Yellow"] .col-rank { border-left-color: var(--house-yellow); }
+tr[data-house^="Red"]    .col-rank { border-left-color: var(--house-red); }
+tr[data-squad="1"] .col-rank { border-left-style: dashed; }
+
+.cell-name { display: flex; flex-direction: column; gap: 1px; }
+.cell-name b { font-weight: 600; }
+.cell-name small { font-family: var(--font-data); font-size: 11px; color: var(--muted); }
+
+.rta { font-family: var(--font-data); font-weight: 500; }
+.rank-label { font-size: 13px; color: var(--text-dim); }
+
+.record { font-family: var(--font-data); font-size: 13.5px; white-space: nowrap; }
+.record b { color: var(--win); font-weight: 500; }
+.record i { color: var(--loss); font-style: normal; }
+.record--void { color: var(--muted); }
+
+.pct { font-family: var(--font-data); font-size: 11.5px; color: var(--muted); display: block; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-data); font-size: 12px;
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 3px 10px 3px 8px;
+  white-space: nowrap;
+}
+.badge__dot { width: 7px; height: 7px; border-radius: 2px; flex: none; }
+.badge[data-house^="White"]  .badge__dot { background: var(--house-white); }
+.badge[data-house^="Purple"] .badge__dot { background: var(--house-purple); }
+.badge[data-house^="Yellow"] .badge__dot { background: var(--house-yellow); }
+.badge[data-house^="Red"]    .badge__dot { background: var(--house-red); }
+.badge[data-house="Unknown"] .badge__dot,
+.badge[data-house="—"] .badge__dot { background: var(--house-none); }
+
+/* a squad dot is the house colour, hollowed out */
+.badge[data-squad="1"] .badge__dot {
+  box-shadow: inset 0 0 0 1px var(--bg);
+  border-radius: 999px;
+}
+/* "Purple 14 (Purple 7, Purple* 7)" — the split, quieter than the total */
+.badge__split {
+  font-size: 10.5px; color: var(--muted); margin-left: 6px;
+  padding-left: 6px; border-left: 1px solid var(--line);
+}
+
+.tag {
+  font-family: var(--font-data); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; color: var(--muted);
+}
+.tag--left    { border-color: var(--brass-dim); color: var(--brass); }
+.tag--unknown { border-color: var(--house-red); color: var(--house-red); }
+.tag--flag    { border-color: var(--house-yellow); color: var(--house-yellow); }
+
+.table-note { color: var(--muted); font-size: 12.5px; margin: 10px 2px 0; }
+.table-note kbd {
+  font-family: var(--font-data); font-size: 11px;
+  border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px;
+}
+
+.empty { padding: 26px 18px; color: var(--muted); text-align: center; margin: 0; }
+.range-note { color: var(--muted); font-size: 13.5px; margin: -8px 0 20px; }
+
+/* ---------------------------------------------------------
+   Roster cards
+   --------------------------------------------------------- */
+
+.roster {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); gap: 12px;
+}
+.roster a {
+  display: block; text-decoration: none;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 15px 16px; height: 100%;
+  border-left: 3px solid var(--line);
+}
+.roster a:hover { border-color: var(--brass-dim); border-left-color: var(--brass); background: var(--panel-2); }
+.roster a[data-house^="White"]  { border-left-color: var(--house-white); }
+.roster a[data-house^="Purple"] { border-left-color: var(--house-purple); }
+.roster a[data-house^="Yellow"] { border-left-color: var(--house-yellow); }
+.roster a[data-house^="Red"]    { border-left-color: var(--house-red); }
+.roster a[data-squad="1"] { border-left-style: dashed; }
+.roster__top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.roster__name { font-family: var(--font-display); font-size: 17px; font-weight: 700; }
+.roster__code { font-family: var(--font-data); font-size: 11px; color: var(--muted); }
+.roster__meta { margin: 8px 0 0; font-family: var(--font-data); font-size: 12.5px; color: var(--text-dim); }
+.roster__meta span { color: var(--muted); }
+
+/* ---------------------------------------------------------
+   Player detail
+   --------------------------------------------------------- */
+
+.back-link {
+  display: inline-block; margin-bottom: 16px;
+  font-family: var(--font-data); font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); text-decoration: none;
+}
+.back-link:hover { color: var(--brass); }
+.back-link::before { content: "← "; }
+
+.player-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 20px; flex-wrap: wrap;
+  padding-bottom: 18px; border-bottom: 1px solid var(--line); margin-bottom: 22px;
+}
+.player-head__name { font-size: clamp(28px, 5vw, 40px); line-height: 1.02; }
+.player-head__code {
+  font-family: var(--font-data); font-size: 12px; letter-spacing: .16em;
+  color: var(--brass); text-transform: uppercase; margin: 0 0 6px;
+}
+.player-head__tags { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px 20px; margin-bottom: 20px;
+}
+.panel__title { font-size: 16px; margin-bottom: 4px; }
+.panel__note { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+.panel--fatal { border-color: var(--house-red); }
+.panel--fatal code {
+  font-family: var(--font-data); font-size: 12.5px;
+  background: var(--ink); padding: 1px 5px; border-radius: 3px; color: var(--brass);
+}
+.panel--fatal ul { color: var(--text-dim); font-size: 14px; padding-left: 20px; }
+
+/* house ribbon — a player's house history, read left to right */
+.ribbon { display: flex; gap: 3px; margin: 4px 0 0; overflow-x: auto; padding-bottom: 4px; }
+.ribbon__seg { flex: 1 1 34px; min-width: 34px; text-align: center; }
+.ribbon__bar { height: 26px; border-radius: 3px; border: 1px solid rgba(0,0,0,.35); }
+.ribbon__seg[data-house^="White"]  .ribbon__bar { background: var(--house-white); }
+.ribbon__seg[data-house^="Purple"] .ribbon__bar { background: var(--house-purple); }
+.ribbon__seg[data-house^="Yellow"] .ribbon__bar { background: var(--house-yellow); }
+.ribbon__seg[data-house^="Red"]    .ribbon__bar { background: var(--house-red); }
+.ribbon__seg[data-house="Unknown"] .ribbon__bar { background: var(--house-none); }
+/* squad weeks: same colour, notched, so a move from Purple to Purple*
+   is visible without inventing a second purple */
+.ribbon__seg[data-squad="1"] .ribbon__bar {
+  background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.42) 0 3px, transparent 3px 7px);
+}
+.ribbon__seg[data-absent="1"] .ribbon__bar {
+  background: repeating-linear-gradient(45deg, var(--line) 0 4px, transparent 4px 8px);
+}
+.ribbon__label {
+  display: block; font-family: var(--font-data); font-size: 10px; color: var(--muted);
+  margin-top: 5px; letter-spacing: .04em;
+}
+
+.chart { width: 100%; height: auto; display: block; }
+.chart-legend {
+  display: flex; gap: 16px; flex-wrap: wrap; margin: 10px 0 0;
+  font-family: var(--font-data); font-size: 11.5px; color: var(--muted);
+}
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+
+/* ---------------------------------------------------------
+   History
+   --------------------------------------------------------- */
+
+.week-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 18px; margin-bottom: 12px;
+}
+.week-card__head { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.week-card__id { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+.week-card__id a { text-decoration: none; }
+.week-card__id a:hover { color: var(--brass); }
+.week-card__stats { font-family: var(--font-data); font-size: 12.5px; color: var(--text-dim); display: flex; gap: 18px; flex-wrap: wrap; }
+.week-card__stats span { color: var(--muted); }
+.week-card__moves { margin: 12px 0 0; display: flex; gap: 10px 22px; flex-wrap: wrap; font-size: 13px; }
+.week-card__moves p { margin: 0; color: var(--text-dim); }
+.week-card__moves b { font-weight: 500; color: var(--muted); font-family: var(--font-data); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+
+/* ---------------------------------------------------------
+   Boot + footer
+   --------------------------------------------------------- */
+
+.boot { padding: 80px 0; text-align: center; }
+.boot__bars { display: inline-flex; gap: 5px; height: 30px; align-items: flex-end; }
+.boot__bars i { width: 7px; background: var(--brass); border-radius: 2px; animation: rise 1.1s ease-in-out infinite; }
+.boot__bars i:nth-child(1) { height: 40%; animation-delay: 0s; }
+.boot__bars i:nth-child(2) { height: 70%; animation-delay: .12s; }
+.boot__bars i:nth-child(3) { height: 100%; animation-delay: .24s; }
+.boot__bars i:nth-child(4) { height: 55%; animation-delay: .36s; }
+@keyframes rise { 0%,100% { transform: scaleY(.45); opacity:.5 } 50% { transform: scaleY(1); opacity:1 } }
+.boot__bars i { transform-origin: bottom; }
+.boot__text { color: var(--muted); font-family: var(--font-data); font-size: 13px; margin-top: 16px; }
+
+.footer {
+  max-width: var(--wrap); margin: 0 auto; padding: 22px 20px 40px;
+  border-top: 1px solid var(--line);
+  color: var(--muted); font-size: 12.5px;
+}
+.footer p { margin: 0 0 4px; }
+.footer__meta { font-family: var(--font-data); font-size: 11.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+@media (max-width: 720px) {
+  .masthead__inner { padding: 12px 14px; gap: 12px; }
+  .brand { width: 100%; }
+  .nav { width: 100%; }
+  .nav__link { flex: 1 1 auto; text-align: center; padding: 8px 10px; }
+  main { padding: 22px 14px 48px; }
+  .stat__value { font-size: 22px; }
+  .table thead th button { padding: 10px; }
+  .table tbody td { padding: 10px; }
+  .view__head { align-items: flex-start; }
+  .week-picker { width: 100%; justify-content: space-between; }
+}

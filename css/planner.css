@@ -1,0 +1,374 @@
+/* =========================================================
+   planner.css — the Planner tab only.
+
+   Every rule is scoped to #view-planner, except the four things
+   the planner appends to <body> (drag ghost, modal, toast) and the
+   buttons the modal reuses. That scoping is what lets this file sit
+   next to css/styles.css without either one bleeding into the other:
+   .roster, .toggle and .brand exist in both, and stay separate.
+
+   Colours come from the statistics palette in css/styles.css, so the
+   two halves of the site read as one. The only planner-specific
+   colours are the node ring and the "in hand" marker, which have to
+   hold their own against the artwork underneath.
+   ========================================================= */
+
+#view-planner {
+  --uf-node:   #3FE4F0;                 /* node ring — cyan, to match the map filaments */
+  --uf-hold:   var(--brass);            /* the node currently "in hand" */
+  --uf-danger: var(--house-red);
+  --uf-head-h: 76px;                    /* real masthead height, kept in sync by planner.js */
+  --uf-font-label: "Chakra Petch", var(--font-body), sans-serif;
+}
+
+/* The board wants more room than a table does. */
+body.is-planner main { max-width: 1560px; }
+
+/* ---------------------------------------------------------
+   Head tools
+   --------------------------------------------------------- */
+
+#view-planner .uf-tools {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+}
+
+#view-planner .load-state {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--font-data); font-size: 12.5px;
+  color: var(--muted); letter-spacing: .04em;
+}
+/* status pip: dim while loading, green once the roster is in, red on failure */
+#view-planner .load-state::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--muted); box-shadow: 0 0 8px currentColor;
+}
+#view-planner .load-state.ok { color: var(--win); }
+#view-planner .load-state.ok::before { background: var(--win); box-shadow: 0 0 10px var(--win); }
+#view-planner .load-state.bad { color: var(--uf-danger); }
+#view-planner .load-state.bad::before { background: var(--uf-danger); box-shadow: none; }
+
+#view-planner .link-btn,
+.map-error .link-btn {
+  padding: 6px 0; border: 0; background: none;
+  color: var(--muted); cursor: pointer;
+  font-family: var(--font-data); font-size: 11px;
+  letter-spacing: .12em; text-transform: uppercase;
+  text-decoration: underline; text-underline-offset: 4px;
+}
+#view-planner .link-btn:hover { color: var(--brass); }
+#view-planner .link-btn[hidden] { display: none; }
+
+#view-planner .toggle {
+  font-family: var(--font-data); font-size: 11px;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+  padding-bottom: 0;
+}
+
+/* ---------------------------------------------------------
+   Layout
+   --------------------------------------------------------- */
+
+#view-planner .uf-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 22px;
+  align-items: start;
+}
+
+#view-planner .stage { min-width: 0; }
+#view-planner .stage-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius);
+}
+#view-planner .stage-scroll::-webkit-scrollbar { height: 8px; }
+#view-planner .stage-scroll::-webkit-scrollbar-thumb { background: var(--brass-dim); border-radius: 4px; }
+
+#view-planner #planner {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+  background: var(--ink-2);
+  line-height: 0;
+}
+#view-planner #planner-img {
+  display: block; width: 100%; height: auto;
+  user-select: none; -webkit-user-drag: none;
+}
+/* Hold the frame open at the map's aspect ratio while it's missing,
+   so the layout doesn't collapse. */
+#view-planner #planner.no-map { aspect-ratio: 1601 / 982; }
+#view-planner #planner.no-map #planner-img { display: none; }
+
+#view-planner .map-error {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 28px; text-align: center;
+  line-height: 1.5;
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, .02) 0 12px, transparent 12px 24px);
+}
+#view-planner .map-error[hidden] { display: none; }
+#view-planner .map-error h3 {
+  margin: 0;
+  font-family: var(--font-display); font-weight: 700; font-size: 16px;
+  color: var(--uf-danger);
+}
+#view-planner .map-error p { margin: 0; max-width: 52ch; font-size: 13px; color: var(--muted); }
+#view-planner #map-error-paths { font-family: var(--font-data); font-size: 11.5px; word-break: break-all; }
+#view-planner .map-error-hint { opacity: .85; }
+
+/* ---------------------------------------------------------
+   Drop zones — transparent targets positioned in %, so they
+   ride the image at any size. The artwork is never recoloured.
+   --------------------------------------------------------- */
+
+#view-planner .zone {
+  position: absolute;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 5px;
+  border: 0; background: transparent;
+  border-radius: 3px;
+  color: #fff;
+  font-family: var(--uf-font-label); font-weight: 700;
+  letter-spacing: .02em;
+  white-space: nowrap; overflow: hidden;
+  line-height: 1.05;
+  cursor: pointer;
+  touch-action: manipulation;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .92), 0 0 9px rgba(0, 0, 0, .75);
+  transition: box-shadow .14s ease;
+}
+#view-planner .zone:focus-visible { outline: 2px solid var(--uf-node); outline-offset: 1px; }
+
+/* Only ever an inset ring — the box colours underneath stay untouched */
+#view-planner .zone.is-target { box-shadow: inset 0 0 0 1px rgba(63, 228, 240, .5); }
+#view-planner .zone.is-target:hover,
+#view-planner .zone.is-over { box-shadow: inset 0 0 0 2px var(--uf-node), 0 0 24px rgba(63, 228, 240, .7); }
+#view-planner .zone.is-held { box-shadow: inset 0 0 0 2px var(--uf-hold); }
+#view-planner.outline .zone { box-shadow: inset 0 0 0 1px rgba(63, 228, 240, .6); }
+
+#view-planner .zone .clear {
+  position: absolute; top: 1px; right: 2px;
+  width: 15px; height: 15px; padding: 0;
+  display: none; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%;
+  background: rgba(4, 7, 13, .72); color: #fff;
+  font-family: var(--font-body); font-size: 11px; line-height: 1;
+  cursor: pointer; opacity: .55;
+}
+#view-planner .zone.filled .clear { display: flex; }
+#view-planner .zone .clear:hover,
+#view-planner .zone .clear:focus-visible { opacity: 1; background: var(--uf-danger); }
+
+#view-planner .stage-hint {
+  margin: 12px 2px 0;
+  font-family: var(--font-data); font-size: 11px;
+  letter-spacing: .11em; text-transform: uppercase; color: var(--muted);
+}
+#view-planner .stage-hint.sub { display: none; margin-top: 4px; opacity: .7; }
+@media (max-width: 760px) { #view-planner .stage-hint.sub { display: block; } }
+
+/* ---------------------------------------------------------
+   Roster panel
+   --------------------------------------------------------- */
+
+#view-planner .uf-roster {
+  display: flex; flex-direction: column;
+  max-height: calc(100vh - var(--uf-head-h) - 46px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, .42);
+  position: sticky;
+  top: calc(var(--uf-head-h) + 14px);
+}
+#view-planner .uf-roster.is-dropping {
+  border-color: var(--brass);
+  box-shadow: 0 0 0 1px var(--brass), 0 24px 50px rgba(0, 0, 0, .42);
+}
+
+#view-planner .roster-head { padding: 16px 16px 14px; border-bottom: 1px solid var(--line); }
+#view-planner .roster-head h3 {
+  margin: 0;
+  font-family: var(--font-display); font-size: 16px;
+}
+#view-planner .counts {
+  margin: 6px 0 12px;
+  font-family: var(--font-data); font-size: 11px; color: var(--muted);
+}
+#view-planner .counts span { color: var(--text); }
+
+#view-planner .meter { height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+#view-planner .meter i {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, var(--brass-dim), var(--brass));
+  transition: width .28s ease;
+}
+#view-planner .meter-label {
+  margin: 7px 0 12px;
+  font-family: var(--font-data); font-size: 10.5px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+
+#view-planner .member-list {
+  list-style: none; margin: 0; padding: 8px;
+  overflow-y: auto; flex: 1 1 auto; min-height: 0;
+  scrollbar-width: thin; scrollbar-color: var(--brass-dim) transparent;
+}
+#view-planner .member-list::-webkit-scrollbar { width: 8px; }
+#view-planner .member-list::-webkit-scrollbar-thumb { background: var(--brass-dim); border-radius: 4px; }
+
+#view-planner .member {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; margin-bottom: 4px;
+  border: 1px solid transparent; border-radius: var(--radius-s);
+  background: var(--panel-2);
+  color: var(--text); font-family: var(--font-body); font-size: 14px;
+  text-align: left; cursor: grab;
+  touch-action: manipulation;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+#view-planner .member:hover { border-color: var(--brass-dim); }
+#view-planner .member:active { cursor: grabbing; }
+
+/* The rank sits in a notched cell, echoing a node readout on the map */
+#view-planner .member .rank {
+  flex: 0 0 auto; min-width: 30px;
+  padding: 2px 0; text-align: center;
+  font-family: var(--font-data); font-size: 11px; font-weight: 600;
+  color: var(--muted);
+  background: rgba(0, 0, 0, .34);
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+}
+#view-planner .member .name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#view-planner .member .at {
+  flex: 0 0 auto;
+  font-family: var(--font-data); font-size: 10px;
+  letter-spacing: .08em; color: var(--brass);
+}
+
+#view-planner .member.assigned { border-color: var(--brass-dim); }
+#view-planner .member.assigned .rank { color: var(--brass); }
+#view-planner .member.selected {
+  background: rgba(198, 161, 91, .16);
+  border-color: var(--brass);
+  transform: translateX(2px);
+}
+
+#view-planner .empty-note {
+  margin: 0; padding: 18px 18px 22px;
+  font-size: 13.5px; color: var(--muted);
+}
+#view-planner .empty-note b { color: var(--text); font-weight: 600; }
+
+#view-planner .roster-foot {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 9px;
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--line);
+}
+
+/* ---------------------------------------------------------
+   Buttons — global, because the confirm dialog lives on <body>
+   and reuses them. No .btn rule exists in css/styles.css.
+   --------------------------------------------------------- */
+
+.btn {
+  padding: 11px 10px;
+  border-radius: var(--radius-s); border: 1px solid transparent;
+  font-family: var(--font-data); font-weight: 500; font-size: 11.5px;
+  letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .12s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--brass); border-color: var(--brass); color: #1A1204; }
+.btn-primary:hover { background: #D7B475; border-color: #D7B475; }
+.btn-ghost { background: transparent; border-color: var(--line); color: var(--text); }
+.btn-ghost:hover { border-color: var(--house-red); color: var(--house-red); }
+.btn-quiet {
+  grid-column: 1 / -1;
+  background: none; border: 0; padding: 4px;
+  color: var(--muted); font-family: var(--font-data);
+  font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; cursor: pointer;
+}
+.btn-quiet:hover { color: var(--house-red); }
+
+/* ---------------------------------------------------------
+   Body-level furniture: drag ghost, dialog, toast.
+   These are appended to <body>, so they cannot be scoped.
+   --------------------------------------------------------- */
+
+/* Follows the finger during a touch drag. Pointer-events off so the
+   hit test underneath still finds the node being hovered. */
+.drag-ghost {
+  position: fixed; top: 0; left: 0; z-index: 70;
+  padding: 7px 12px;
+  border: 1px solid var(--brass); border-radius: var(--radius-s);
+  background: var(--panel-2);
+  color: var(--text); font-family: var(--font-body); font-size: 14px;
+  white-space: nowrap;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .6);
+  pointer-events: none;
+}
+
+.modal-scrim {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  background: rgba(3, 5, 10, .76); backdrop-filter: blur(5px);
+}
+.modal-scrim[hidden] { display: none; }
+.modal {
+  width: min(380px, 100%);
+  padding: 24px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .7);
+}
+.modal h3 { margin: 0 0 8px; font-family: var(--font-display); font-size: 18px; }
+.modal p { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.modal-actions .btn { min-width: 104px; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 26px; z-index: 60;
+  transform: translate(-50%, 20px);
+  padding: 11px 20px;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-family: var(--font-data); font-size: 12px; letter-spacing: .04em;
+  opacity: 0; pointer-events: none;
+  transition: opacity .22s ease, transform .22s ease;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* Visitor counter sits in the shared footer */
+#site-visitor-stats[data-state="off"] .vc-counts { display: none; }
+
+/* ---------------------------------------------------------
+   Responsive
+   --------------------------------------------------------- */
+
+@media (max-width: 1040px) {
+  #view-planner .uf-layout { grid-template-columns: 1fr; }
+  #view-planner .uf-roster { position: static; max-height: none; }
+  #view-planner .member-list { max-height: 46vh; }
+}
+
+/* Below this width the 30 nodes get too small to tap, so the map keeps
+   a usable size and the stage scrolls horizontally instead. */
+@media (max-width: 760px) {
+  #view-planner #planner { min-width: 700px; }
+}
+
+@media (max-width: 560px) {
+  #view-planner .roster-foot { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #view-planner *, .toast, .drag-ghost { transition: none !important; animation: none !important; }
+}
