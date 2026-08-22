@@ -491,7 +491,14 @@
     if (!sel) return;
 
     var options = [{ id: OVERALL, label: 'Overall' }].concat(
-      data.stats.weekSheets.map(function (w) { return { id: w, label: w }; })
+      data.stats.weekSheets
+        .slice()
+        .sort(function (a, b) {
+          return b.localeCompare(a, undefined, { numeric: true });
+        })
+        .map(function (w) {
+          return { id: w, label: w };
+        })
     );
 
     sel.innerHTML = options.map(function (o) {
