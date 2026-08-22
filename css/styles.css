@@ -600,42 +600,28 @@ tr[data-squad="1"] .col-rank { border-left-style: dashed; }
   background: var(--ink); padding: 1px 5px; border-radius: 3px; color: var(--brass);
 }
 
-/* ---------- week tabs ----------
-   Overall first, then one per weekly sheet. The row scrolls sideways
-   rather than wrapping, so a workbook with twenty weeks still reads as
-   a single ledger strip. */
+/* ---------- week picker ----------
+   Overall first, then one option per weekly sheet. A dropdown rather
+   than a row of tabs, so a workbook with twenty weeks stays one control
+   at any width. Styled to match the Week and Range pickers elsewhere. */
 
 .dt-scope {
-  display: flex; gap: 6px;
+  display: flex; align-items: center; gap: 10px;
   margin: 0 0 18px;
-  padding-bottom: 8px;
-  overflow-x: auto;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--line);
-  scrollbar-width: thin; scrollbar-color: var(--brass-dim) transparent;
 }
-.dt-scope::-webkit-scrollbar { height: 6px; }
-.dt-scope::-webkit-scrollbar-thumb { background: var(--brass-dim); border-radius: 3px; }
+.dt-scope__label {
+  font-family: var(--font-data); font-size: 11px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--muted);
+}
+.dt-scope .control--select { width: auto; min-width: 190px; }
+.dt-scope .control--select:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
 
-.dt-tab {
-  flex: none;
-  padding: 7px 15px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  font-family: var(--font-data); font-size: 12px;
-  letter-spacing: .08em;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: border-color .15s ease, color .15s ease, background .15s ease;
+@media (max-width: 560px) {
+  .dt-scope { justify-content: space-between; }
+  .dt-scope .control--select { min-width: 0; flex: 1 1 auto; }
 }
-.dt-tab:hover { color: var(--text); border-color: var(--brass-dim); }
-.dt-tab.is-active {
-  color: var(--text);
-  border-color: var(--brass);
-  background: rgba(198, 161, 91, .13);
-}
-.dt-tab:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
 
 #dtScopeEmpty[hidden] { display: none; }
 

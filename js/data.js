@@ -1,6 +1,10 @@
 /* =========================================================
-   data.js — reads master.xlsx and every W<n>.xlsx, checks them,
-   and hands the app one clean object. Nothing here touches the DOM.
+   data.js — reads master.xlsx and every weekly tab of player_stat.xlsx,
+   checks them, and hands the app one clean object. Nothing here touches
+   the DOM.
+
+   One workbook holds every week, the same way team_stat.xlsx holds every
+   defence sheet: data/weeks/ and its manifest.json are gone.
 
    Rule of the house: a broken file never takes the site down.
    It is reported, skipped, and everything else still loads.
@@ -274,10 +278,10 @@
     return players;
   }
 
-  /* ---------- W<n>.xlsx ---------- */
+  /* ---------- one weekly tab of player_stat.xlsx ---------- */
 
   function parseWeek(rows, weekId, issues) {
-    var scope = weekId + '.xlsx';
+    var scope = 'player_stat.xlsx · ' + weekId;
     var wanted = ['name', 'code', 'house', 'atkW', 'atkL', 'defW', 'defL'];
     var found = mapColumns(rows, wanted);
     var map = found.map;
@@ -352,73 +356,68 @@
     return records;
   }
 
-  /* ---------- week discovery ---------- */
+  /* ---------- week discovery ----------
+
+     Every week lives in one workbook, data/player_stat.xlsx, with one tab
+     per week: W01, W02 … W010, W011. Tabs are discovered, never listed —
+     add W012 to the file and it appears on its own, with nothing to push
+     to data/weeks/ and no manifest to regenerate.                        */
 
   function weekNumber(id) {
-    var m = /^W(\d+)$/i.exec(id);
+    var m = /^W(\d+)$/i.exec(trim(id));
     return m ? parseInt(m[1], 10) : NaN;
   }
 
-  function loadManifest(issues) {
-    return fetch(bust(CFG.manifestPath), { cache: 'no-store' })
-      .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(function (json) {
-        var weeks = (json && json.weeks) || [];
-        if (!Array.isArray(weeks)) throw new Error('manifest.json has no "weeks" array.');
-        var clean = weeks.map(trim).filter(function (id) {
-          if (isNaN(weekNumber(id))) {
-            issues.warn('manifest.json', 'Ignoring "' + id + '" — week names must look like W01.');
-            return false;
-          }
-          return true;
-        });
-        return { weeks: clean, source: 'manifest', generated: json.generated || null };
-      })
-      .catch(function (err) {
-        issues.warn('manifest.json', 'Could not read the week manifest (' + err.message + '). Falling back to a direct file scan — push to GitHub so the workflow can generate it.');
-        if (!CFG.manifestFallback.enabled) return { weeks: [], source: 'none' };
-        return probeWeeks().then(function (found) {
-          return { weeks: found, source: 'probe' };
-        });
-      });
+  function weekSheetRe() {
+    return new RegExp(CFG.weekSheetPattern || '^W\\d+$', 'i');
   }
 
-  /* Safety net only: HEAD-checks W1…W{maxWeek} in small batches.
-     Each number is tried unpadded, 2-digit and 3-digit — W10, W010 and W0010
-     are all the same week, and a file named either way must still be found. */
-  function probeWeeks() {
-    var max = CFG.manifestFallback.maxWeek;
-    var ids = [];
-    for (var n = 1; n <= max; n++) {
-      ['' + n, String(n).padStart(2, '0'), String(n).padStart(3, '0')].forEach(function (s) {
-        var id = 'W' + s;
-        if (ids.indexOf(id) === -1) ids.push(id);
-      });
+  function statPath() { return CFG.playerStatPath || 'data/player_stat.xlsx'; }
+
+  function sheetRows(wb, name) {
+    var sheet = wb.Sheets[name];
+    if (!sheet) return [];
+    return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, blankrows: false, defval: '' });
+  }
+
+  /* ---------- Record_Date ----------
+
+     Two columns: the week name and the date it was recorded. Weeks are
+     matched by NUMBER, so the row written "W11" still dates the sheet
+     called "W011". Anything unreadable is skipped in silence — a date is
+     decoration on the Dashboard heading, never something to fail over. */
+
+  function toDate(raw) {
+    if (raw == null || trim(raw) === '') return null;
+    if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw;
+
+    /* An Excel serial: days since 1899-12-30, read as a plain number.
+       Built in local time, like every other date here, so a date never
+       slips to the day before west of Greenwich. */
+    if (typeof raw === 'number' && isFinite(raw) && raw > 0 && raw < 80000) {
+      var d = new Date(1899, 11, 30 + Math.round(raw));
+      return isNaN(d.getTime()) ? null : d;
     }
 
-    var hits = {};                 // week number -> first spelling that answered
-    var batchSize = 18;
+    // "2026-08-23" and "2026/08/23" — read as a calendar day, not as UTC.
+    var iso = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/.exec(trim(raw));
+    if (iso) return new Date(+iso[1], +iso[2] - 1, +iso[3]);
 
-    function runBatch(start) {
-      if (start >= ids.length) {
-        return Promise.resolve(Object.keys(hits)
-          .sort(function (a, b) { return a - b; })
-          .map(function (k) { return hits[k]; }));
-      }
-      var slice = ids.slice(start, start + batchSize);
-      return Promise.all(slice.map(function (id) {
-        return fetch(CFG.weeksPath + id + '.xlsx', { method: 'HEAD' })
-          .then(function (r) {
-            var num = weekNumber(id);
-            if (r.ok && !isNaN(num) && hits[num] === undefined) hits[num] = id;
-          })
-          .catch(function () {});
-      })).then(function () { return runBatch(start + batchSize); });
-    }
-    return runBatch(0);
+    var parsed = new Date(trim(raw));
+    return isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  function parseDates(rows) {
+    var byNum = new Map();
+    rows.forEach(function (row) {
+      row = row || [];
+      var num = weekNumber(row[0]);
+      if (isNaN(num) || byNum.has(num)) return;      // header row, notes, duplicates
+      var when = null;
+      for (var c = 1; c < row.length && !when; c++) when = toDate(row[c]);
+      if (when) byNum.set(num, when);
+    });
+    return byNum;
   }
 
   /* ---------- orchestration ---------- */
@@ -433,31 +432,64 @@
         return null;
       });
 
-    return Promise.all([masterPromise, loadManifest(issues)]).then(function (res) {
-      var players = res[0];
-      var manifest = res[1];
-      var ids = manifest.weeks.slice().sort(function (a, b) { return weekNumber(a) - weekNumber(b); });
-
-      if (!ids.length) issues.error('data/weeks/', 'No weekly files were found. Add W01.xlsx and push, or check that manifest.json lists your weeks.');
-
-      return Promise.all(ids.map(function (id) {
-        return fetchArrayBuffer(CFG.weeksPath + id + '.xlsx')
-          .then(function (buf) {
-            return {
-              id: id,
-              num: weekNumber(id),
-              rows: parseWeek(readSheet(buf, CFG.weekSheet, id + '.xlsx', issues), id, issues)
-            };
-          })
-          .catch(function (err) {
-            issues.error(id + '.xlsx', describeFileError(err, CFG.weeksPath + id + '.xlsx'));
-            return null;
-          });
-      })).then(function (weeks) {
-        weeks = weeks.filter(Boolean).sort(function (a, b) { return a.num - b.num; });
-        return finalize(players, weeks, issues, manifest);
+    var weeksPromise = fetchArrayBuffer(statPath())
+      .then(function (buf) { return parseStatWorkbook(buf, issues); })
+      .catch(function (err) {
+        issues.error('player_stat.xlsx', describeFileError(err, statPath()));
+        return { weeks: [], dates: new Map() };
       });
+
+    return Promise.all([masterPromise, weeksPromise]).then(function (res) {
+      var players = res[0];
+      var weeks = res[1].weeks;
+      var manifest = { weeks: weeks.map(function (w) { return w.id; }), source: 'player_stat.xlsx' };
+      return finalize(players, weeks, issues, manifest);
     });
+  }
+
+  /* One workbook in, a sorted list of weeks out. A tab that cannot be
+     parsed is reported and skipped; the rest of the file still loads. */
+  function parseStatWorkbook(buffer, issues) {
+    var scope = 'player_stat.xlsx';
+    var wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: true });
+    var re = weekSheetRe();
+
+    var names = wb.SheetNames.filter(function (n) { return re.test(trim(n)); })
+      .sort(function (a, b) { return (weekNumber(a) - weekNumber(b)) || String(a).localeCompare(String(b)); });
+
+    if (!names.length) {
+      issues.error(scope, 'No weekly sheets were found. Weekly tabs are named "W" followed by digits — W01, W02, W011. Sheets present: ' + (wb.SheetNames.join(', ') || 'none') + '.');
+    }
+
+    // The date sheet is optional; without it the Dashboard simply shows no date.
+    var wantDates = CFG.dateSheet || 'Record_Date';
+    var dateSheet = wb.SheetNames.filter(function (n) { return normKey(n) === normKey(wantDates); })[0];
+    var dates = dateSheet ? parseDates(sheetRows(wb, dateSheet)) : new Map();
+    if (!dateSheet) {
+      issues.warn(scope, 'No "' + wantDates + '" sheet, so weeks are shown without their dates.');
+    }
+
+    var weeks = [];
+    names.forEach(function (name) {
+      var num = weekNumber(name);
+      try {
+        weeks.push({
+          id: trim(name),
+          num: num,
+          date: dates.get(num) || null,
+          rows: parseWeek(sheetRows(wb, name), trim(name), issues)
+        });
+      } catch (err) {
+        issues.error(scope + ' · ' + trim(name), err && err.message ? err.message : String(err));
+      }
+    });
+
+    var undated = weeks.filter(function (w) { return !w.date; }).map(function (w) { return w.id; });
+    if (dateSheet && undated.length) {
+      issues.warn(scope, 'No date recorded for ' + undated.join(', ') + ' on the ' + wantDates + ' sheet.');
+    }
+
+    return { weeks: weeks, dates: dates };
   }
 
   function describeFileError(err, path) {
@@ -489,12 +521,12 @@
     });
 
     if (!degraded && unlisted.length) {
-      issues.warn('data/weeks/', unlisted.length + ' player code' + (unlisted.length > 1 ? 's appear' : ' appears') +
-        ' in weekly files but not in master.xlsx: ' + unlisted.slice(0, 8).join(', ') +
+      issues.warn('player_stat.xlsx', unlisted.length + ' player code' + (unlisted.length > 1 ? 's appear' : ' appears') +
+        ' in the weekly sheets but not in master.xlsx: ' + unlisted.slice(0, 8).join(', ') +
         (unlisted.length > 8 ? '…' : '') + '. Their weekly numbers are shown, tagged "not in master".');
     }
     if (degraded) {
-      issues.warn('master.xlsx', 'Running on weekly files alone: RTA, RTA Rank and Status are unavailable, and every player is treated as active.');
+      issues.warn('master.xlsx', 'Running on the weekly sheets alone: RTA, RTA Rank and Status are unavailable, and every player is treated as active.');
     }
 
     // Which weeks each player appears in, oldest first.

@@ -92,9 +92,10 @@
                '" stroke="var(--muted)" stroke-width="2"><title>' + esc(p.label) + ': no battles recorded</title></line>';
       }
 
-      // house tick under the label, so colour history reads across the chart
-      svg += '<rect x="' + (cx - 7) + '" y="' + (H - 12) + '" width="14" height="3" rx="1.5" fill="' + houseColor(p.house) + '" opacity=".85"/>';
-      svg += '<text x="' + cx + '" y="' + (H - 17) + '" text-anchor="middle" fill="var(--muted)" font-size="10" font-family="IBM Plex Mono, monospace">' + esc(p.label) + '</text>';
+      /* Just the week number under the bar. The coloured house tick that
+         used to sit beneath it is gone — the House-by-week ribbon further
+         up the page already tells that story. */
+      svg += '<text x="' + cx + '" y="' + (H - 13) + '" text-anchor="middle" fill="var(--muted)" font-size="10" font-family="IBM Plex Mono, monospace">' + esc(p.label) + '</text>';
     });
 
     svg += '</svg>';

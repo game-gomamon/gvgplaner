@@ -8,12 +8,26 @@ window.APP_CONFIG = {
   /* Paths are relative, so the site works from a repository
      subpath such as https://user.github.io/etheria-restart/ */
   masterPath:   'data/master.xlsx',
-  weeksPath:    'data/weeks/',
-  manifestPath: 'data/weeks/manifest.json',
+
+  /* Every week now lives in ONE workbook, exactly like data/team_stat.xlsx
+     on the Defence tab. data/weeks/ and its manifest.json are no longer
+     read at all — the folder can be deleted. */
+  playerStatPath: 'data/player_stat.xlsx',
 
   /* Worksheet names inside the Excel files */
   masterSheet: 'Players',
-  weekSheet:   'Performance',
+
+  /* Which tabs of player_stat.xlsx count as weekly data: "W" followed by
+     digits and nothing else, so W01, W010 and W011 are picked up while
+     "Record_Date" and any working notes are left alone. Sheet names are
+     never hard-coded: add W012 to the workbook and it appears on its own. */
+  weekSheetPattern: '^W\\d+$',
+
+  /* The sheet that dates each week. Two columns: the week name (W01, W11…)
+     and the date it was recorded. Weeks are matched by NUMBER, so a sheet
+     called W011 still finds the row written as W11. The date is shown on
+     the Dashboard heading only; a missing row simply omits it. */
+  dateSheet: 'Record_Date',
 
   /* Attack attempts allowed per player per week.
      Used only to flag rows that exceed it — nothing is auto-corrected. */
@@ -56,11 +70,6 @@ window.APP_CONFIG = {
      pushed week shows up without a hard refresh. Set to false if you prefer
      GitHub's CDN caching. */
   bustCache: true,
-
-  /* If data/weeks/manifest.json is missing (for example before the GitHub
-     Action has ever run), the site probes for W01…W{maxWeek}.xlsx directly.
-     This is a safety net for local previews, not the normal path. */
-  manifestFallback: { enabled: true, maxWeek: 60 },
 
   /* Which tab opens when someone lands on the site with no #hash.
      One of: planner, dashboard, overall, players, history, defence. */

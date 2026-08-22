@@ -482,42 +482,30 @@
       .sort(function (a, b) { return (b.wins - a.wins) || a.key.localeCompare(b.key); });
   }
 
+  /* A dropdown rather than a row of tabs: a workbook with twenty weekly
+     sheets stays one control, and the select keeps its own keyboard and
+     touch behaviour. The options are refilled only when the workbook
+     changes — switching week just repaints what is below it. */
   function renderTabs(data) {
-    var box = $('dtTabs');
-    if (!box) return;
+    var sel = $('dtScope');
+    if (!sel) return;
 
-    var tabs = [{ id: OVERALL, label: 'Overall' }].concat(
+    var options = [{ id: OVERALL, label: 'Overall' }].concat(
       data.stats.weekSheets.map(function (w) { return { id: w, label: w }; })
     );
 
-    box.innerHTML = tabs.map(function (t) {
-      var on = t.id === scope;
-      return '<button type="button" class="dt-tab' + (on ? ' is-active' : '') + '"' +
-             ' role="tab" aria-selected="' + (on ? 'true' : 'false') + '"' +
-             ' tabindex="' + (on ? '0' : '-1') + '"' +
-             ' data-scope="' + esc(t.id) + '">' + esc(t.label) + '</button>';
+    sel.innerHTML = options.map(function (o) {
+      return '<option value="' + esc(o.id) + '">' + esc(o.label) + '</option>';
     }).join('');
+    sel.value = scope;
 
     if (tabsBound) return;
     tabsBound = true;
 
-    box.addEventListener('click', function (e) {
-      var btn = e.target.closest('.dt-tab');
-      if (!btn || btn.dataset.scope === scope) return;
-      scope = btn.dataset.scope;
-      if (built) { renderTabs(built); paint(built); }
-    });
-
-    // Left/right walk the tabs, as a tablist is expected to.
-    box.addEventListener('keydown', function (e) {
-      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-      var all = Array.prototype.slice.call(box.querySelectorAll('.dt-tab'));
-      var at = all.indexOf(document.activeElement);
-      if (at === -1) return;
-      e.preventDefault();
-      var next = all[(at + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
-      next.click();
-      next.focus();
+    sel.addEventListener('change', function () {
+      if (this.value === scope) return;
+      scope = this.value;
+      if (built) paint(built);
     });
   }
 
@@ -527,13 +515,14 @@
     var teams = teamsFor(data, scope);
     var isWeek = scope !== OVERALL;
     var totalWins = teams.reduce(function (n, t) { return n + t.wins; }, 0);
-    var rows = isWeek ? (stats.rowsBySheet[scope] || 0) : stats.totalRows;
     var best = teams[0];
 
+    /* On a single week the strip carries three cards: the row count that
+       used to sit here said nothing the ranked list below does not. */
     $('dtStats').innerHTML =
       stat('Teams', teams.length, 'distinct three-Animus sets') +
       (isWeek
-        ? stat('Rows read', rows, 'on ' + esc(scope))
+        ? ''
         : stat('Weeks read', stats.weekSheets.length,
                stats.weekSheets.length
                  ? esc(stats.weekSheets[0]) + '–' + esc(stats.weekSheets[stats.weekSheets.length - 1])
@@ -573,7 +562,7 @@
     $('dtNote').innerHTML =
       'Rows are matched on the set of three Animus, so the same team counts once however the names are ordered. ' +
       (isWeek
-        ? 'Showing <b>' + esc(scope) + '</b> only — ' + plural(rows, 'row', 'rows') + ' from that sheet.'
+        ? 'Showing <b>' + esc(scope) + '</b> only.'
         : 'Totals add up ' + plural(stats.totalRows, 'row', 'rows') + ' from ' +
           plural(stats.weekSheets.length, 'sheet', 'sheets') + '.') +
       (notes.length ? '<br>' + notes.map(esc).join(' ') : '');

@@ -107,6 +107,14 @@
            '<b>' + esc(p.name) + tags + '</b><small>' + esc(p.code) + '</small></a>';
   }
 
+  /* Written out by hand rather than left to toLocaleDateString, so every
+     visitor reads the same "23 Aug 2026" whatever their browser locale. */
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function formatDate(d) {
+    if (!(d instanceof Date) || isNaN(d.getTime())) return '';
+    return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
   function statCard(label, value, sub) {
     return '<div class="stat"><p class="stat__label">' + esc(label) + '</p>' +
            '<p class="stat__value">' + value + '</p>' +
@@ -209,12 +217,15 @@
       $('weekStats').innerHTML = '';
       $('dashBody').innerHTML = '';
       $('dashEmpty').hidden = false;
-      $('dashEmpty').textContent = 'Add a weekly file to data/weeks/ to see results here.';
+      $('dashEmpty').textContent = 'Add a W01 sheet to data/player_stat.xlsx to see results here.';
       return;
     }
     state.weekId = week.id;
     $('weekSelect').value = week.id;
-    $('weekTitle').textContent = 'Week ' + week.num;
+    /* "Week 11 (23 Aug 2026)" — the date comes from the Record_Date sheet
+       of player_stat.xlsx and is shown here only. A week with no dated row
+       simply reads "Week 11". */
+    $('weekTitle').textContent = 'Week ' + week.num + (week.date ? ' (' + formatDate(week.date) + ')' : '');
 
     var all = buildWeekRows(week);
     var visibleByStatus = all.filter(function (r) { return state.dashIncludeLeft || r.player.isActive || !r.player.inMaster; });
@@ -356,9 +367,11 @@
     shown.sort(function (a, b) { return compare(a, b, state.ovSort.key, state.ovSort.dir); });
     paintSortHeaders($('ovTable'), state.ovSort);
 
+    /* No data-house here on purpose: Overall is a totals table, so the
+       coloured house bar in front of the name is left off. The Dashboard,
+       which is a single week, still carries it. */
     $('ovBody').innerHTML = shown.map(function (r, i) {
-      return '<tr data-house="' + esc(r.house || 'Unknown') + '" data-squad="' + (Data.isSquad(r.house) ? '1' : '0') +
-        '" data-code="' + esc(r.player.code) + '">' +
+      return '<tr data-code="' + esc(r.player.code) + '">' +
         '<td class="col-rank">' + (i + 1) + '</td>' +
         '<td>' + nameCell(r.player) + '</td>' +
         '<td class="num">' + rtaValue(r.player) + '</td>' +
@@ -511,8 +524,7 @@
   function chartLegend() {
     return '<div class="chart-legend">' +
       '<span><i style="background:var(--win)"></i>Wins</span>' +
-      '<span><i style="background:var(--loss);opacity:.6"></i>Losses</span>' +
-      '<span><i style="background:var(--brass)"></i>House tick under each week</span></div>';
+      '<span><i style="background:var(--loss);opacity:.6"></i>Losses</span></div>';
   }
 
   /* ---------------------------------------------------------
@@ -522,7 +534,7 @@
   function renderHistory() {
     var host = $('historyBody');
     if (!DB.weeks.length) {
-      host.innerHTML = '<p class="empty">No weeks recorded yet. Add W01.xlsx to data/weeks/ and push.</p>';
+      host.innerHTML = '<p class="empty">No weeks recorded yet. Add a W01 sheet to data/player_stat.xlsx and push.</p>';
       return;
     }
 
@@ -563,7 +575,7 @@
         '</div>' +
         '<div class="player-head__tags" style="margin-top:10px">' + houseBits + '</div>' +
         (prev ? '<div class="week-card__moves">' +
-          '<p><b>New this week</b><br>' + (joined.length ? esc(joined.join(', ')) : '—') + '</p>' +
+          '<p><b>New Member in this week</b><br>' + (joined.length ? esc(joined.join(', ')) : '—') + '</p>' +
           '<p><b>Not recorded</b><br>' + (gone.length ? esc(gone.join(', ')) : '—') + '</p>' +
         '</div>' : '') +
       '</article>';
@@ -802,7 +814,7 @@
         showFatal('No data files could be read.', DB.issues.map(function (i) {
           return '<code>' + esc(i.scope) + '</code> — ' + esc(i.message);
         }).concat([
-          'Expected <code>data/master.xlsx</code> and at least one <code>data/weeks/W01.xlsx</code>.'
+          'Expected <code>data/master.xlsx</code> and <code>data/player_stat.xlsx</code> with at least one <code>W01</code> sheet.'
         ]));
         return;
       }
@@ -814,8 +826,7 @@
 
       $('footerMeta').textContent =
         DB.weeks.length + ' week' + (DB.weeks.length === 1 ? '' : 's') + ' · ' +
-        DB.players.size + ' players · week list from ' +
-        (DB.manifest.source === 'manifest' ? 'manifest.json' : DB.manifest.source === 'probe' ? 'a direct file scan' : 'nowhere') +
+        DB.players.size + ' players · weeks read from ' + DB.manifest.source +
         ' · loaded ' + DB.loadedAt.toLocaleString();
 
       route();
