@@ -338,8 +338,11 @@
 
     <!-- ready -->
     <div data-when="ready">
+      <!-- Overall + one tab per weekly sheet, built by js/defence.js -->
+      <div class="dt-scope" id="dtTabs" role="tablist" aria-label="Which weeks to count"></div>
       <div class="stat-strip" id="dtStats"></div>
       <ol class="dt-teams" id="dtList"></ol>
+      <p class="empty" id="dtScopeEmpty" hidden></p>
       <p class="table-note" id="dtNote"></p>
     </div>
   </section>

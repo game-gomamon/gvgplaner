@@ -286,7 +286,11 @@
           members: names.slice(),     // display order = first spelling seen
           wins: 0,
           rows: 0,
-          weeks: new Set()
+          weeks: new Set(),
+          /* Per-sheet totals, kept alongside the running total so the week
+             tabs never have to re-read the workbook. */
+          weekWins: Object.create(null),
+          weekRows: Object.create(null)
         };
         teams.set(key, entry);
       }
@@ -295,9 +299,12 @@
       entry.wins += wins.value;
       entry.rows += 1;
       entry.weeks.add(sheetName);
+      entry.weekWins[sheetName] = (entry.weekWins[sheetName] || 0) + wins.value;
+      entry.weekRows[sheetName] = (entry.weekRows[sheetName] || 0) + 1;
       used++;
     }
 
+    stats.rowsBySheet[sheetName] = (stats.rowsBySheet[sheetName] || 0) + used;
     if (!used) stats.emptySheets.push(sheetName);
     return used;
   }
@@ -312,7 +319,7 @@
     if (cache) return cache;
 
     var stats = {
-      animusCount: 0, weekSheets: [], emptySheets: [],
+      animusCount: 0, weekSheets: [], emptySheets: [], rowsBySheet: Object.create(null),
       badRows: 0, badWins: 0, totalRows: 0, notes: []
     };
 
@@ -356,6 +363,8 @@
           wins: entry.wins,
           rows: entry.rows,
           weeks: entry.weeks.size,
+          weekWins: entry.weekWins,
+          weekRows: entry.weekRows,
           members: entry.members.map(function (raw) {
             var rec = animus.get(nameKey(raw));
             return {
@@ -440,35 +449,115 @@
       '</li>';
   }
 
-  function render(data) {
-    var teams = data.teams;
+  /* ---------------------------------------------------------
+     Scope: "overall" (every sheet added up) or one sheet name.
+
+     The workbook is still read once. A week tab is a view over the
+     per-sheet totals already folded into each team, so switching tabs
+     costs nothing but a re-render.
+     --------------------------------------------------------- */
+
+  var OVERALL = 'overall';
+  var scope = OVERALL;
+  var built = null;                 // the last built data, kept for re-renders
+  var tabsBound = false;
+
+  /* The list for one scope. Teams that never appear in that week drop out,
+     and the wins shown are that week's wins, so the ranking is the week's
+     own — not the overall order filtered down. */
+  function teamsFor(data, which) {
+    if (which === OVERALL) return data.teams;
+
+    return data.teams
+      .filter(function (t) { return t.weekRows[which]; })
+      .map(function (t) {
+        return {
+          key: t.key,
+          members: t.members,
+          wins: t.weekWins[which] || 0,
+          rows: t.weekRows[which] || 0,
+          weeks: 1
+        };
+      })
+      .sort(function (a, b) { return (b.wins - a.wins) || a.key.localeCompare(b.key); });
+  }
+
+  function renderTabs(data) {
+    var box = $('dtTabs');
+    if (!box) return;
+
+    var tabs = [{ id: OVERALL, label: 'Overall' }].concat(
+      data.stats.weekSheets.map(function (w) { return { id: w, label: w }; })
+    );
+
+    box.innerHTML = tabs.map(function (t) {
+      var on = t.id === scope;
+      return '<button type="button" class="dt-tab' + (on ? ' is-active' : '') + '"' +
+             ' role="tab" aria-selected="' + (on ? 'true' : 'false') + '"' +
+             ' tabindex="' + (on ? '0' : '-1') + '"' +
+             ' data-scope="' + esc(t.id) + '">' + esc(t.label) + '</button>';
+    }).join('');
+
+    if (tabsBound) return;
+    tabsBound = true;
+
+    box.addEventListener('click', function (e) {
+      var btn = e.target.closest('.dt-tab');
+      if (!btn || btn.dataset.scope === scope) return;
+      scope = btn.dataset.scope;
+      if (built) { renderTabs(built); paint(built); }
+    });
+
+    // Left/right walk the tabs, as a tablist is expected to.
+    box.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      var all = Array.prototype.slice.call(box.querySelectorAll('.dt-tab'));
+      var at = all.indexOf(document.activeElement);
+      if (at === -1) return;
+      e.preventDefault();
+      var next = all[(at + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
+      next.click();
+      next.focus();
+    });
+  }
+
+  /* Everything below the tab bar: the stat strip, the ranked list, the note. */
+  function paint(data) {
     var stats = data.stats;
-
-    if (!teams.length) {
-      setState('empty');
-      $('dtEmpty').innerHTML = stats.weekSheets.length
-        ? 'The ' + plural(stats.weekSheets.length, 'weekly sheet', 'weekly sheets') +
-          ' in <code>team_stat.xlsx</code> (' + esc(stats.weekSheets.join(', ')) +
-          ') hold no rows with all three Animus filled in.'
-        : 'No weekly sheets were found in <code>team_stat.xlsx</code>. Weekly sheets are named <code>W</code> followed by digits — <code>W011</code>, <code>W012</code>, and so on.';
-      return;
-    }
-
+    var teams = teamsFor(data, scope);
+    var isWeek = scope !== OVERALL;
     var totalWins = teams.reduce(function (n, t) { return n + t.wins; }, 0);
+    var rows = isWeek ? (stats.rowsBySheet[scope] || 0) : stats.totalRows;
     var best = teams[0];
 
     $('dtStats').innerHTML =
       stat('Teams', teams.length, 'distinct three-Animus sets') +
-      stat('Weeks read', stats.weekSheets.length, stats.weekSheets.length ? esc(stats.weekSheets[0]) + '–' + esc(stats.weekSheets[stats.weekSheets.length - 1]) : '—') +
-      stat('Defence wins', totalWins, 'across every sheet') +
-      stat('Best team', best.wins, esc(best.members.map(function (m) { return m.name; }).join(' · ')));
+      (isWeek
+        ? stat('Rows read', rows, 'on ' + esc(scope))
+        : stat('Weeks read', stats.weekSheets.length,
+               stats.weekSheets.length
+                 ? esc(stats.weekSheets[0]) + '–' + esc(stats.weekSheets[stats.weekSheets.length - 1])
+                 : '—')) +
+      stat('Defence wins', totalWins, isWeek ? 'on ' + esc(scope) : 'across every sheet') +
+      stat('Best team', best ? best.wins : 0,
+           best ? esc(best.members.map(function (m) { return m.name; }).join(' · ')) : '—');
 
-    $('dtList').innerHTML = teams.map(function (t, i) { return teamCard(t, i + 1); }).join('');
+    var empty = $('dtScopeEmpty');
+    if (!teams.length) {
+      $('dtList').innerHTML = '';
+      if (empty) {
+        empty.hidden = false;
+        empty.innerHTML = 'No rows with all three Animus filled in on <code>' + esc(scope) + '</code>.';
+      }
+    } else {
+      if (empty) empty.hidden = true;
+      $('dtList').innerHTML = teams.map(function (t, i) { return teamCard(t, i + 1); }).join('');
 
-    // Portraits that 404 fall back to the initials drawn on the frame.
-    $('dtList').querySelectorAll('.dt-animus__frame img').forEach(function (img) {
-      img.addEventListener('error', function () { img.remove(); }, { once: true });
-    });
+      // Portraits that 404 fall back to the initials drawn on the frame.
+      $('dtList').querySelectorAll('.dt-animus__frame img').forEach(function (img) {
+        img.addEventListener('error', function () { img.remove(); }, { once: true });
+      });
+    }
 
     var notes = stats.notes.slice();
     if (stats.badRows) {
@@ -483,10 +572,32 @@
 
     $('dtNote').innerHTML =
       'Rows are matched on the set of three Animus, so the same team counts once however the names are ordered. ' +
-      'Totals add up ' + plural(stats.totalRows, 'row', 'rows') + ' from ' +
-      plural(stats.weekSheets.length, 'sheet', 'sheets') + '.' +
+      (isWeek
+        ? 'Showing <b>' + esc(scope) + '</b> only — ' + plural(rows, 'row', 'rows') + ' from that sheet.'
+        : 'Totals add up ' + plural(stats.totalRows, 'row', 'rows') + ' from ' +
+          plural(stats.weekSheets.length, 'sheet', 'sheets') + '.') +
       (notes.length ? '<br>' + notes.map(esc).join(' ') : '');
+  }
 
+  function render(data) {
+    var stats = data.stats;
+    built = data;
+
+    if (!data.teams.length) {
+      setState('empty');
+      $('dtEmpty').innerHTML = stats.weekSheets.length
+        ? 'The ' + plural(stats.weekSheets.length, 'weekly sheet', 'weekly sheets') +
+          ' in <code>team_stat.xlsx</code> (' + esc(stats.weekSheets.join(', ')) +
+          ') hold no rows with all three Animus filled in.'
+        : 'No weekly sheets were found in <code>team_stat.xlsx</code>. Weekly sheets are named <code>W</code> followed by digits — <code>W011</code>, <code>W012</code>, and so on.';
+      return;
+    }
+
+    // A remembered week that is no longer in the workbook falls back to Overall.
+    if (scope !== OVERALL && stats.weekSheets.indexOf(scope) === -1) scope = OVERALL;
+
+    renderTabs(data);
+    paint(data);
     setState('ready');
   }
 
