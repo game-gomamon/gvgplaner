@@ -577,3 +577,125 @@ tr[data-squad="1"] .col-rank { border-left-style: dashed; }
   .view__head { align-items: flex-start; }
   .week-picker { width: 100%; justify-content: space-between; }
 }
+
+/* =========================================================
+   Defence teams — the Defence Team tab.
+
+   Scoped to #view-defence so it cannot reach the tables.
+   Reuses .stat, .panel, .empty, .boot__bars and .tag from above,
+   so the tab reads as part of the same ledger.
+   ========================================================= */
+
+/* Four states, swapped by the [data-state] attribute js/defence.js sets. */
+#view-defence [data-when] { display: none; }
+#view-defence[data-state="loading"] [data-when="loading"],
+#view-defence[data-state="error"]   [data-when="error"],
+#view-defence[data-state="empty"]   [data-when="empty"],
+#view-defence[data-state="ready"]   [data-when="ready"] { display: block; }
+
+#view-defence .dt-boot { padding: 56px 0; text-align: center; }
+
+#view-defence code {
+  font-family: var(--font-data); font-size: 12.5px;
+  background: var(--ink); padding: 1px 5px; border-radius: 3px; color: var(--brass);
+}
+
+/* ---------- the ranked list ---------- */
+
+.dt-teams { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+
+.dt-team {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px 14px 0;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  transition: border-color .15s ease, background .15s ease;
+}
+.dt-team:hover { border-color: var(--brass-dim); background: var(--panel-2); }
+
+/* The top three carry the brass edge; everything below stays quiet. */
+.dt-team.is-podium { border-left-color: var(--brass); }
+
+.dt-team__rank {
+  justify-self: center;
+  font-family: var(--font-data); font-size: 13px; font-weight: 600;
+  color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.dt-team.is-podium .dt-team__rank { color: var(--brass); }
+
+/* ---------- the three portraits ---------- */
+
+.dt-team__line { display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap; min-width: 0; }
+
+.dt-animus { margin: 0; width: 76px; text-align: center; }
+
+/* A notched cell, echoing the rank readout on the planner board.
+   The initials sit underneath the picture and show through when the
+   file is missing — js/defence.js removes the <img> on a 404. */
+.dt-animus__frame {
+  position: relative; display: block;
+  width: 64px; height: 64px; margin: 0 auto 7px;
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  overflow: hidden;
+}
+.dt-animus__frame::after {
+  content: attr(data-fallback);
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-data); font-size: 15px; letter-spacing: .06em;
+  color: var(--muted);
+}
+.dt-animus__frame img {
+  position: relative; z-index: 1;
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.dt-team:hover .dt-animus__frame { border-color: var(--brass-dim); }
+
+.dt-animus__name {
+  font-size: 12px; line-height: 1.3; color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+.dt-animus__name .tag { padding: 0 4px; margin-left: 2px; }
+
+/* ---------- the score ---------- */
+
+.dt-team__score { text-align: right; min-width: 86px; }
+.dt-team__score b {
+  display: block;
+  font-family: var(--font-display); font-size: 28px; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.dt-team__score span {
+  display: block; margin-top: 5px;
+  font-family: var(--font-data); font-size: 10px;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+}
+.dt-team.is-podium .dt-team__score b { color: var(--brass); }
+
+/* ---------- narrow screens ---------- */
+
+@media (max-width: 620px) {
+  .dt-team {
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px 12px;
+    padding: 12px 14px 14px 0;
+  }
+  /* Score drops under the portraits and reads left-to-right instead. */
+  .dt-team__score {
+    grid-column: 2; text-align: left; min-width: 0;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .dt-team__score b { font-size: 21px; }
+  .dt-team__score span { margin-top: 0; }
+  .dt-team__line { gap: 10px; }
+  .dt-animus { width: 62px; }
+  .dt-animus__frame { width: 54px; height: 54px; }
+  .dt-animus__name { font-size: 11px; }
+}

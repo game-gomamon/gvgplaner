@@ -63,8 +63,52 @@ window.APP_CONFIG = {
   manifestFallback: { enabled: true, maxWeek: 60 },
 
   /* Which tab opens when someone lands on the site with no #hash.
-     One of: planner, dashboard, overall, players, history. */
+     One of: planner, dashboard, overall, players, history, defence. */
   defaultView: 'planner',
+
+  /* =========================================================
+     DEFENCE TEAM
+     The strongest three-Animus defence teams, read from a single
+     workbook. Independent of master.xlsx and the weekly files —
+     if those are missing this tab still works.
+     ========================================================= */
+  defence: {
+
+    /* Relative, so the site works from a repository subpath such as
+       https://user.github.io/etheria-restart/. Never write '/data/...'. */
+    dataPath: 'data/team_stat.xlsx',
+
+    /* The sheet mapping each Animus to its portrait. */
+    animusSheet: 'Animus',
+
+    /* Which tabs count as weekly data. "W" followed by digits and nothing
+       else, so W011, W012 and W013 are picked up automatically while
+       "Animus" and any working notes are left alone. Sheet names are never
+       hard-coded: add W014 to the workbook and it appears on its own. */
+    weekSheetPattern: '^W\\d+$',
+
+    /* Where the Animus portraits live.
+
+       The Profile column of the Animus sheet does NOT hold a path. Excel
+       stores those pictures as in-cell images, which SheetJS cannot read —
+       it returns an empty cell. So the portraits are unpacked from the
+       workbook into this folder by scripts/extract-animus.mjs, and
+       index.json maps each Animus name to its file.
+
+       Run:  node scripts/extract-animus.mjs
+
+       If the Profile column is ever changed to hold real paths or URLs,
+       those are used instead and none of this is needed. */
+    profileDir:   'assets/animus/',
+    profileIndex: 'assets/animus/index.json',
+    profileExt:   'png',
+
+    /* The workbook is re-read on every visit by default, matching bustCache
+       above. Set to false to let the browser cache it — worth doing while
+       the Profile and Card columns are still in the file, because those
+       pictures make it very large. */
+    bustCache: undefined
+  },
 
   /* =========================================================
      PLANNER

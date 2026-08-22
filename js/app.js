@@ -615,10 +615,16 @@
      Routing
      --------------------------------------------------------- */
 
-  /* 'planner' is the placement board; the rest read the spreadsheets.
-     They share this router so the whole site is one page and one nav. */
-  var VIEWS = ['planner', 'dashboard', 'overall', 'players', 'player', 'history'];
+  /* 'planner' is the placement board and 'defence' reads its own workbook;
+     the rest read master.xlsx and the weekly files. They share this router
+     so the whole site is one page and one nav.
+
+     STATS_VIEWS is the subset that needs those spreadsheets. Planner and
+     defence are deliberately outside it, so a data failure cannot strand
+     either of them. */
+  var VIEWS = ['planner', 'dashboard', 'overall', 'players', 'player', 'history', 'defence'];
   var STATS_VIEWS = ['dashboard', 'overall', 'players', 'player', 'history'];
+  var STANDALONE_VIEWS = ['planner', 'defence'];
 
   function defaultView() {
     var want = (CFG && CFG.defaultView) || 'dashboard';
@@ -646,11 +652,14 @@
     // the board wants a wider page than the tables do
     document.body.classList.toggle('is-planner', view === 'planner');
 
-    if (view === 'planner') {
+    /* Neither of these reads master.xlsx or the weekly files, so they are
+       answered before the data gate below. */
+    if (STANDALONE_VIEWS.indexOf(view) !== -1) {
       $('fatal').hidden = true;
-      $('boot').hidden = true;          // the board needs none of the spreadsheets
-      // Boots on first visit, re-measures the node labels on every visit.
-      if (window.UFPlanner) window.UFPlanner.init();
+      $('boot').hidden = true;
+      // Both boot on first visit; the planner also re-measures its labels.
+      if (view === 'planner' && window.UFPlanner) window.UFPlanner.init();
+      if (view === 'defence' && window.EtheriaDefence) window.EtheriaDefence.init();
       window.scrollTo({ top: 0, behavior: 'auto' });
       return;
     }
@@ -769,11 +778,12 @@
   function start() {
     bindShell();
 
-    /* The board reads Member.xlsx and the map image only, so it should not
-       sit behind the statistics load. Open it straight away when it is the
-       landing tab; route() runs again once the data resolves. */
+    /* The board reads Member.xlsx and the map image only, and the defence
+       tab reads team_stat.xlsx only, so neither should sit behind the
+       statistics load. Open one straight away when it is the landing tab;
+       route() runs again once the data resolves. */
     var wanted = (location.hash.replace(/^#\/?/, '') || defaultView()).split('/')[0];
-    if (wanted === 'planner') route();
+    if (STANDALONE_VIEWS.indexOf(wanted) !== -1) route();
 
     if (typeof XLSX === 'undefined') {
       showFatal('The spreadsheet reader (SheetJS) did not load, so no Excel file can be opened.', [

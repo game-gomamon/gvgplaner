@@ -42,6 +42,7 @@
       <a class="nav__link" href="#/overall"   data-view="overall">Overall</a>
       <a class="nav__link" href="#/players"   data-view="players">Players</a>
       <a class="nav__link" href="#/history"   data-view="history">History</a>
+      <a class="nav__link" href="#/defence"   data-view="defence">Defence Team</a>
     </nav>
 
     <button class="chip chip--status" id="statusChip" type="button" hidden aria-expanded="false" aria-controls="issuePanel">
@@ -302,6 +303,47 @@
     <div id="historyBody"></div>
   </section>
 
+  <!-- ============ DEFENCE TEAM ============
+       Reads data/team_stat.xlsx on its own. The four states below are
+       swapped by the [data-state] attribute, which js/defence.js sets.
+       ======================================================== -->
+  <section class="view" id="view-defence" data-state="loading" hidden>
+    <div class="view__head">
+      <div>
+        <p class="eyebrow">Defence</p>
+        <h2 class="view__title">Strongest defence teams</h2>
+      </div>
+    </div>
+
+    <p class="range-note">
+      Every three-Animus team recorded in <code>team_stat.xlsx</code>, ranked by total defence wins.
+      Position does not matter — the same three Animus count as one team however they are ordered.
+    </p>
+
+    <!-- loading -->
+    <div class="dt-boot" data-when="loading">
+      <div class="boot__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <p class="boot__text" id="dtProgress">Reading team_stat.xlsx…</p>
+    </div>
+
+    <!-- error -->
+    <div class="panel panel--fatal" data-when="error">
+      <h2 class="panel__title">The defence data could not be loaded</h2>
+      <div id="dtErrorBody"></div>
+      <p class="panel__note">Every other tab is unaffected.</p>
+    </div>
+
+    <!-- empty -->
+    <p class="empty" id="dtEmpty" data-when="empty"></p>
+
+    <!-- ready -->
+    <div data-when="ready">
+      <div class="stat-strip" id="dtStats"></div>
+      <ol class="dt-teams" id="dtList"></ol>
+      <p class="table-note" id="dtNote"></p>
+    </div>
+  </section>
+
 </main>
 
 <!-- ============ PLANNER DIALOG + TOAST (appended to body, shared) ============ -->
@@ -338,6 +380,7 @@
 <script src="js/data.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/planner.js"></script>
+<script src="js/defence.js"></script>
 <script src="js/app.js"></script>
 
 <script>
