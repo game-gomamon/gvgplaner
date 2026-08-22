@@ -494,7 +494,9 @@
       data.stats.weekSheets
         .slice()
         .sort(function (a, b) {
-          return b.localeCompare(a, undefined, { numeric: true });
+          var na = parseInt(String(a).replace(/\D/g, ''), 10);
+          var nb = parseInt(String(b).replace(/\D/g, ''), 10);
+          return nb - na;
         })
         .map(function (w) {
           return { id: w, label: w };
