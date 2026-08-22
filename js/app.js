@@ -340,11 +340,6 @@
     var weeks = rangeWeeks();
     $('rangeSelect').value = state.range;
 
-    $('rangeNote').textContent = weeks.length
-      ? 'Adding up actual wins and losses from ' + weeks[0].id + ' to ' + weeks[weeks.length - 1].id +
-        ' (' + weeks.length + ' week' + (weeks.length === 1 ? '' : 's') + '). RTA and RTA Rank are the current values from master.xlsx.'
-      : 'No weeks available.';
-
     var rows = [];
     DB.players.forEach(function (p) {
       if (!state.ovIncludeLeft && p.inMaster && !p.isActive) return;
