@@ -108,8 +108,9 @@
   }
 
   /* Written out by hand rather than left to toLocaleDateString, so every
-     visitor reads the same "23 Aug 2026" whatever their browser locale. */
-  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+     visitor reads the same "30 August 2026" whatever their browser locale. */
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
   function formatDate(d) {
     if (!(d instanceof Date) || isNaN(d.getTime())) return '';
     return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
@@ -222,10 +223,15 @@
     }
     state.weekId = week.id;
     $('weekSelect').value = week.id;
-    /* "Week 11 (23 Aug 2026)" — the date comes from the Record_Date sheet
-       of player_stat.xlsx and is shown here only. A week with no dated row
-       simply reads "Week 11". */
-    $('weekTitle').textContent = 'Week ' + week.num + (week.date ? ' (' + formatDate(week.date) + ')' : '');
+    /* "Week 13 — 30 August 2026 (Win)" — date and result both come from the
+       Record_Date sheet of player_stat.xlsx and are shown here only. Either
+       may be missing: an undated week reads "Week 13 (Win)", and a week with
+       no result recorded reads "Week 13 — 30 August 2026". */
+    $('weekTitle').innerHTML = 'Week ' + week.num +
+      (week.date ? ' <span class="week-title__date">' + esc(formatDate(week.date)) + '</span>' : '') +
+      (week.result
+        ? ' <span class="result result--' + (week.result === 'Win' ? 'win' : 'loss') + '">' + esc(week.result) + '</span>'
+        : '');
 
     var all = buildWeekRows(week);
     var visibleByStatus = all.filter(function (r) { return state.dashIncludeLeft || r.player.isActive || !r.player.inMaster; });

@@ -407,15 +407,31 @@
     return isNaN(parsed.getTime()) ? null : parsed;
   }
 
+  /* The Result column of the same sheet. Only a recognisable win or loss
+     counts; a blank, a note or anything else leaves the week without a
+     result rather than inventing one. */
+  function toResult(raw) {
+    var s = trim(raw).toLowerCase();
+    if (s === 'win' || s === 'won') return 'Win';
+    if (s === 'lose' || s === 'loss' || s === 'lost') return 'Lose';
+    return null;
+  }
+
+  /* Date and result are picked out by TYPE, not by column position, so the
+     two can sit in either order and an extra column between them is
+     harmless. Each is taken from the first cell that yields one. */
   function parseDates(rows) {
     var byNum = new Map();
     rows.forEach(function (row) {
       row = row || [];
       var num = weekNumber(row[0]);
       if (isNaN(num) || byNum.has(num)) return;      // header row, notes, duplicates
-      var when = null;
-      for (var c = 1; c < row.length && !when; c++) when = toDate(row[c]);
-      if (when) byNum.set(num, when);
+      var when = null, result = null;
+      for (var c = 1; c < row.length; c++) {
+        if (!when) when = toDate(row[c]);
+        if (!result) result = toResult(row[c]);
+      }
+      if (when || result) byNum.set(num, { date: when, result: result });
     });
     return byNum;
   }
@@ -472,11 +488,13 @@
     var weeks = [];
     names.forEach(function (name) {
       var num = weekNumber(name);
+      var meta = dates.get(num) || {};
       try {
         weeks.push({
           id: trim(name),
           num: num,
-          date: dates.get(num) || null,
+          date: meta.date || null,
+          result: meta.result || null,
           rows: parseWeek(sheetRows(wb, name), trim(name), issues)
         });
       } catch (err) {
