@@ -9,7 +9,7 @@ window.APP_CONFIG = {
      subpath such as https://user.github.io/etheria-restart/ */
   masterPath:   'data/master.xlsx',
 
-  /* Every week now lives in ONE workbook, exactly like data/team_stat.xlsx
+  /* Every week now lives in ONE workbook, exactly like data/def_stat.xlsx
      on the Defence tab. data/weeks/ and its manifest.json are no longer
      read at all — the folder can be deleted. */
   playerStatPath: 'data/player_stat.xlsx',
@@ -72,7 +72,7 @@ window.APP_CONFIG = {
   bustCache: true,
 
   /* Which tab opens when someone lands on the site with no #hash.
-     One of: planner, dashboard, overall, players, history, defence. */
+     One of: planner, dashboard, overall, players, history, defence, attack. */
   defaultView: 'planner',
 
   /* =========================================================
@@ -85,7 +85,7 @@ window.APP_CONFIG = {
 
     /* Relative, so the site works from a repository subpath such as
        https://user.github.io/etheria-restart/. Never write '/data/...'. */
-    dataPath: 'data/team_stat.xlsx',
+    dataPath: 'data/def_stat.xlsx',
 
     /* The sheet mapping each Animus to its portrait. */
     animusSheet: 'Animus',
@@ -116,6 +116,24 @@ window.APP_CONFIG = {
        above. Set to false to let the browser cache it — worth doing while
        the Profile and Card columns are still in the file, because those
        pictures make it very large. */
+    bustCache: undefined
+  },
+
+  /* =========================================================
+     ATTACK TEAM
+     The same board as DEFENCE TEAM, read from its own workbook
+     and ranked by ATK_Win instead of DEF_Win. Same layout: an
+     "Animus" sheet plus W-numbered weekly sheets with
+     Animus_A / Animus_B / Animus_C / ATK_Win.
+
+     Anything not set here (animusSheet, weekSheetPattern and the
+     three profile* settings) is taken from the defence block
+     above, so both tabs share the portraits in assets/animus/.
+     ========================================================= */
+  attack: {
+    dataPath: 'data/atk_stat.xlsx',
+
+    /* Same meaning as defence.bustCache. */
     bustCache: undefined
   },
 

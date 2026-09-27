@@ -628,16 +628,17 @@
      Routing
      --------------------------------------------------------- */
 
-  /* 'planner' is the placement board and 'defence' reads its own workbook;
+  /* 'planner' is the placement board; 'defence' and 'attack' each read
+     their own workbook;
      the rest read master.xlsx and the weekly files. They share this router
      so the whole site is one page and one nav.
 
-     STATS_VIEWS is the subset that needs those spreadsheets. Planner and
-     defence are deliberately outside it, so a data failure cannot strand
-     either of them. */
-  var VIEWS = ['planner', 'dashboard', 'overall', 'players', 'player', 'history', 'defence'];
+     STATS_VIEWS is the subset that needs those spreadsheets. Planner,
+     defence and attack are deliberately outside it, so a data failure cannot strand
+     any of them. */
+  var VIEWS = ['planner', 'dashboard', 'overall', 'players', 'player', 'history', 'defence', 'attack'];
   var STATS_VIEWS = ['dashboard', 'overall', 'players', 'player', 'history'];
-  var STANDALONE_VIEWS = ['planner', 'defence'];
+  var STANDALONE_VIEWS = ['planner', 'defence', 'attack'];
 
   function defaultView() {
     var want = (CFG && CFG.defaultView) || 'dashboard';
@@ -673,6 +674,7 @@
       // Both boot on first visit; the planner also re-measures its labels.
       if (view === 'planner' && window.UFPlanner) window.UFPlanner.init();
       if (view === 'defence' && window.EtheriaDefence) window.EtheriaDefence.init();
+      if (view === 'attack' && window.EtheriaAttack) window.EtheriaAttack.init();
       window.scrollTo({ top: 0, behavior: 'auto' });
       return;
     }
@@ -791,8 +793,8 @@
   function start() {
     bindShell();
 
-    /* The board reads Member.xlsx and the map image only, and the defence
-       tab reads team_stat.xlsx only, so neither should sit behind the
+    /* The board reads Member.xlsx and the map image only, the defence
+       tab reads def_stat.xlsx and the attack tab atk_stat.xlsx only, so neither should sit behind the
        statistics load. Open one straight away when it is the landing tab;
        route() runs again once the data resolves. */
     var wanted = (location.hash.replace(/^#\/?/, '') || defaultView()).split('/')[0];

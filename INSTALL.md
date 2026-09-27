@@ -1,4 +1,4 @@
-# Defence Team tab — install
+# Defence Team + Attack Team tabs — install
 
 Copy these over your repo, keeping the same folder layout:
 
@@ -6,11 +6,12 @@ Copy these over your repo, keeping the same folder layout:
 index.html                      (replaces yours)
 js/config.js                    (replaces yours)
 js/app.js                       (replaces yours)
-js/defence.js                   (new)
+js/defence.js                   (replaces yours — now drives both tabs)
 css/styles.css                  (replaces yours)
 scripts/extract-animus.mjs      (new)
 assets/animus/                  (new — unzip animus-portraits.zip at the repo root)
-data/team_stat.xlsx             (yours, unchanged)
+data/def_stat.xlsx              (your old def_stat.xlsx, RENAMED)
+data/atk_stat.xlsx              (new — attack stats, ATK_Win column)
 ```
 
 `css/planner.css`, `js/data.js`, `js/charts.js`, `js/planner.js` and
@@ -22,6 +23,19 @@ right place. Commit them.
 
 ---
 
+## Attack Team tab
+
+Same board as Defence Team, placed right after it in the nav, reading
+`data/atk_stat.xlsx`. Same sheet layout: an `Animus` sheet plus `W017`,
+`W018`… with `Animus_A`, `Animus_B`, `Animus_C`, `ATK_Win`. It reuses the
+portraits in `assets/animus/`, so nothing extra to extract. Path is set in
+`attack.dataPath` in `js/config.js`.
+
+`atk_stat.xlsx` also carries the in-cell Profile pictures (~5 MB), so the
+same "shrink the workbook" advice below applies to it.
+
+---
+
 ## Re-running the portrait extractor
 
 Only needed when the Animus sheet gains new entries or new pictures:
@@ -30,7 +44,7 @@ Only needed when the Animus sheet gains new entries or new pictures:
 node scripts/extract-animus.mjs
 ```
 
-It reads `data/team_stat.xlsx`, writes `assets/animus/*.png` plus
+It reads `data/def_stat.xlsx`, writes `assets/animus/*.png` plus
 `assets/animus/index.json`, and deletes portraits for Animus that are no
 longer on the sheet. No npm install — it uses only Node built-ins.
 
@@ -41,7 +55,7 @@ workbook, push, and the tab picks it up.
 
 ## Recommended: shrink the workbook
 
-`data/team_stat.xlsx` is 29.65 MB, and `bustCache: true` makes the browser
+`data/def_stat.xlsx` is 29.65 MB, and `bustCache: true` makes the browser
 re-download it on every visit. Almost all of that weight is the pictures in
 the `Profile` and `Card` columns.
 
@@ -49,7 +63,7 @@ Once the portraits are extracted and committed, those columns are dead weight
 for the website:
 
 1. Run `node scripts/extract-animus.mjs` and commit `assets/animus/`.
-2. Open `data/team_stat.xlsx`, delete the `Profile` and `Card` columns on the
+2. Open `data/def_stat.xlsx`, delete the `Profile` and `Card` columns on the
    `Animus` sheet, save.
 3. Commit.
 
@@ -64,7 +78,7 @@ If you would rather leave the columns in place, set `defence.bustCache` to
 
 ## Notes
 
-- The tab reads `data/team_stat.xlsx` relative to `index.html`, so it works
+- The tab reads `data/def_stat.xlsx` relative to `index.html`, so it works
   under a GitHub Pages project URL such as
   `https://user.github.io/etheria-restart/`.
 - It does not read `master.xlsx` or `data/weeks/`. If those fail to load the

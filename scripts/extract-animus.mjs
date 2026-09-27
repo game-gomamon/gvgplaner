@@ -2,7 +2,7 @@
 /**
  * extract-animus.mjs
  *
- * Pulls the Animus portraits out of data/team_stat.xlsx and writes them to
+ * Pulls the Animus portraits out of data/def_stat.xlsx and writes them to
  * assets/animus/, plus an index.json that maps each Animus name to its file.
  *
  * WHY THIS SCRIPT EXISTS
@@ -35,7 +35,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlink
 import { join } from 'node:path';
 import { inflateRawSync } from 'node:zlib';
 
-const WORKBOOK = join('data', 'team_stat.xlsx');
+const WORKBOOK = join('data', 'def_stat.xlsx');
 const OUT_DIR = join('assets', 'animus');
 const INDEX = join(OUT_DIR, 'index.json');
 

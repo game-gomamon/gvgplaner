@@ -1,8 +1,17 @@
 /* =========================================================
-   defence.js — the Defence Team tab.
+   defence.js — the Defence Team and Attack Team tabs.
 
-   Reads data/team_stat.xlsx once, on the first visit to the tab,
-   and answers one question: which three-Animus teams defend best?
+   One engine, two boards. Each reads its own workbook once, on the
+   first visit to its tab, and answers one question: which
+   three-Animus teams win most?
+
+     Defence Team  ->  data/def_stat.xlsx   (DEF_Win)  -> window.EtheriaDefence
+     Attack Team   ->  data/atk_stat.xlsx   (ATK_Win)  -> window.EtheriaAttack
+
+   Both workbooks share the same layout: an "Animus" sheet plus one
+   W-numbered sheet per week with Animus_A / Animus_B / Animus_C and
+   a win column. Everything that differs between the two tabs is in
+   the BOARDS table at the bottom of this file.
 
    Nothing here touches the statistics half of the site. If
    master.xlsx and the weekly files are missing, this tab still works,
@@ -13,7 +22,24 @@
   'use strict';
 
   var CFG = global.APP_CONFIG || {};
-  var DCFG = CFG.defence || {};
+
+  function createBoard(opts) {
+
+  /* This board's settings. Portrait settings fall back to the defence
+     block, so both tabs share one assets/animus/ folder. bustCache falls
+     back to the site-wide setting (see bust() below). */
+  var BASE = CFG.defence || {};
+  var OWN = CFG[opts.configKey] || {};
+  var DCFG = {};
+  ['animusSheet', 'weekSheetPattern', 'profileDir', 'profileIndex', 'profileExt'].forEach(function (k) {
+    DCFG[k] = OWN[k] !== undefined ? OWN[k] : BASE[k];
+  });
+  DCFG.bustCache = OWN.bustCache;
+  DCFG.dataPath = OWN.dataPath || opts.defaultPath;
+
+  var DATA_PATH = DCFG.dataPath;
+  var FILE = DATA_PATH.split('/').pop();   // e.g. def_stat.xlsx, for messages
+  var P = opts.prefix;                      // element id prefix: dt / at
 
   /* Sheets to treat as weekly data: "W" followed by digits, nothing else.
      W011, W12, W1 all qualify; "Animus", "Notes", "W1 draft" do not.
@@ -60,7 +86,7 @@
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 
-  /* DEF_Win must never reach the UI as NaN. Anything unreadable counts as 0
+  /* The win column must never reach the UI as NaN. Anything unreadable counts as 0
      and is tallied so the footnote can admit how many cells were skipped. */
   function toWins(raw) {
     if (raw === null || raw === undefined || trim(raw) === '') return { value: 0, ok: false };
@@ -173,7 +199,7 @@
     a:   ['animusa', 'animus1', 'a', 'slot1', 'first'],
     b:   ['animusb', 'animus2', 'b', 'slot2', 'second'],
     c:   ['animusc', 'animus3', 'c', 'slot3', 'third'],
-    win: ['defwin', 'defwins', 'defencewin', 'defencewins', 'defensewin', 'defensewins', 'wins', 'win']
+    win: opts.winAliases
   };
 
   /* ---------------------------------------------------------
@@ -259,7 +285,7 @@
       return 0;
     }
     if (map.win === undefined) {
-      stats.notes.push('Sheet "' + sheetName + '" has no DEF_Win column; its rows count as 0 wins.');
+      stats.notes.push('Sheet "' + sheetName + '" has no ' + opts.winColumn + ' column; its rows count as 0 wins.');
     }
 
     var used = 0;
@@ -324,7 +350,7 @@
     };
 
     cache = Promise.all([
-      fetchWorkbook(DCFG.dataPath || 'data/team_stat.xlsx', reportProgress),
+      fetchWorkbook(DATA_PATH, reportProgress),
       loadProfileIndex()
     ]).then(function (res) {
       var wb = XLSX.read(new Uint8Array(res[0]), { type: 'array' });
@@ -412,17 +438,17 @@
      --------------------------------------------------------- */
 
   function reportProgress(received, total) {
-    var el = $('dtProgress');
+    var el = $(P + 'Progress');
     if (!el) return;
     var mb = function (n) { return (n / 1048576).toFixed(1) + ' MB'; };
     el.textContent = total
-      ? 'Reading team_stat.xlsx — ' + mb(received) + ' of ' + mb(total) +
+      ? 'Reading ' + FILE + ' — ' + mb(received) + ' of ' + mb(total) +
         ' (' + Math.round((received / total) * 100) + '%)'
-      : 'Reading team_stat.xlsx — ' + mb(received);
+      : 'Reading ' + FILE + ' — ' + mb(received);
   }
 
   function setState(name) {
-    var view = $('view-defence');
+    var view = $(opts.viewId);
     if (view) view.setAttribute('data-state', name);
   }
 
@@ -444,7 +470,7 @@
         '<div class="dt-team__line">' + team.members.map(portrait).join('') + '</div>' +
         '<div class="dt-team__score">' +
           '<b>' + team.wins + '</b>' +
-          '<span>' + (team.wins === 1 ? 'defence win' : 'defence wins') + '</span>' +
+          '<span>' + (team.wins === 1 ? opts.winNoun : opts.winNounPlural) + '</span>' +
         '</div>' +
       '</li>';
   }
@@ -487,7 +513,7 @@
      touch behaviour. The options are refilled only when the workbook
      changes — switching week just repaints what is below it. */
   function renderTabs(data) {
-    var sel = $('dtScope');
+    var sel = $(P + 'Scope');
     if (!sel) return;
 
     var options = [{ id: OVERALL, label: 'Overall' }].concat(
@@ -528,31 +554,33 @@
 
     /* On a single week the strip carries three cards: the row count that
        used to sit here said nothing the ranked list below does not. */
-    $('dtStats').innerHTML =
+    $(P + 'Stats').innerHTML =
       stat('Teams', teams.length, 'distinct three-Animus sets') +
       (isWeek
         ? ''
         : stat('Weeks read', stats.weekSheets.length,
                stats.weekSheets.length
-                 ? esc(stats.weekSheets[0]) + '–' + esc(stats.weekSheets[stats.weekSheets.length - 1])
+                 ? (stats.weekSheets.length === 1
+                     ? esc(stats.weekSheets[0])
+                     : esc(stats.weekSheets[0]) + '–' + esc(stats.weekSheets[stats.weekSheets.length - 1]))
                  : '—')) +
-      stat('Defence wins', totalWins, isWeek ? 'on ' + esc(scope) : 'across every sheet') +
+      stat(opts.winStat, totalWins, isWeek ? 'on ' + esc(scope) : 'across every sheet') +
       stat('Best team', best ? best.wins : 0,
            best ? esc(best.members.map(function (m) { return m.name; }).join(' · ')) : '—');
 
-    var empty = $('dtScopeEmpty');
+    var empty = $(P + 'ScopeEmpty');
     if (!teams.length) {
-      $('dtList').innerHTML = '';
+      $(P + 'List').innerHTML = '';
       if (empty) {
         empty.hidden = false;
         empty.innerHTML = 'No rows with all three Animus filled in on <code>' + esc(scope) + '</code>.';
       }
     } else {
       if (empty) empty.hidden = true;
-      $('dtList').innerHTML = teams.map(function (t, i) { return teamCard(t, i + 1); }).join('');
+      $(P + 'List').innerHTML = teams.map(function (t, i) { return teamCard(t, i + 1); }).join('');
 
       // Portraits that 404 fall back to the initials drawn on the frame.
-      $('dtList').querySelectorAll('.dt-animus__frame img').forEach(function (img) {
+      $(P + 'List').querySelectorAll('.dt-animus__frame img').forEach(function (img) {
         img.addEventListener('error', function () { img.remove(); }, { once: true });
       });
     }
@@ -562,13 +590,13 @@
       notes.push(plural(stats.badRows, 'row was', 'rows were') + ' missing an Animus and skipped.');
     }
     if (stats.badWins) {
-      notes.push(plural(stats.badWins, 'DEF_Win cell', 'DEF_Win cells') + ' could not be read as a number and counted as 0.');
+      notes.push(plural(stats.badWins, opts.winColumn + ' cell', opts.winColumn + ' cells') + ' could not be read as a number and counted as 0.');
     }
     if (stats.emptySheets.length) {
       notes.push('No usable rows on ' + esc(stats.emptySheets.join(', ')) + '.');
     }
 
-    $('dtNote').innerHTML =
+    $(P + 'Note').innerHTML =
       'Rows are matched on the set of three Animus, so the same team counts once however the names are ordered. ' +
       (isWeek
         ? 'Showing <b>' + esc(scope) + '</b> only.'
@@ -583,11 +611,11 @@
 
     if (!data.teams.length) {
       setState('empty');
-      $('dtEmpty').innerHTML = stats.weekSheets.length
+      $(P + 'Empty').innerHTML = stats.weekSheets.length
         ? 'The ' + plural(stats.weekSheets.length, 'weekly sheet', 'weekly sheets') +
-          ' in <code>team_stat.xlsx</code> (' + esc(stats.weekSheets.join(', ')) +
+          ' in <code>' + esc(FILE) + '</code> (' + esc(stats.weekSheets.join(', ')) +
           ') hold no rows with all three Animus filled in.'
-        : 'No weekly sheets were found in <code>team_stat.xlsx</code>. Weekly sheets are named <code>W</code> followed by digits — <code>W011</code>, <code>W012</code>, and so on.';
+        : 'No weekly sheets were found in <code>' + esc(FILE) + '</code>. Weekly sheets are named <code>W</code> followed by digits — <code>W011</code>, <code>W012</code>, and so on.';
       return;
     }
 
@@ -607,7 +635,7 @@
 
   function fail(err) {
     setState('error');
-    var path = DCFG.dataPath || 'data/team_stat.xlsx';
+    var path = DATA_PATH;
     var why;
     if (err && err.status === 404) {
       why = 'No file at <code>' + esc(path) + '</code>. Check it is committed, and that the name matches exactly — GitHub Pages is case-sensitive.';
@@ -616,7 +644,7 @@
     } else {
       why = esc(err && err.message ? err.message : String(err));
     }
-    $('dtErrorBody').innerHTML = '<p class="panel__note">' + why + '</p>';
+    $(P + 'ErrorBody').innerHTML = '<p class="panel__note">' + why + '</p>';
     if (global.console) global.console.error(err);
   }
 
@@ -632,8 +660,8 @@
 
     if (typeof XLSX === 'undefined') {
       setState('error');
-      $('dtErrorBody').innerHTML =
-        '<p class="panel__note">The spreadsheet reader (SheetJS) did not load, so <code>team_stat.xlsx</code> cannot be opened.</p>';
+      $(P + 'ErrorBody').innerHTML =
+        '<p class="panel__note">The spreadsheet reader (SheetJS) did not load, so <code>' + esc(FILE) + '</code> cannot be opened.</p>';
       painted = true;
       return;
     }
@@ -656,6 +684,37 @@
     init();
   }
 
-  global.EtheriaDefence = { init: init, refresh: refresh, teamKey: teamKey };
+  return { init: init, refresh: refresh, teamKey: teamKey };
+  }
+
+  /* ---------------------------------------------------------
+     BOARDS — the only place the two tabs differ.
+     To add a third board: add a block to config.js, a section to
+     index.html with its own id prefix, and one entry here.
+     --------------------------------------------------------- */
+
+  global.EtheriaDefence = createBoard({
+    configKey:     'defence',
+    defaultPath:   'data/def_stat.xlsx',
+    viewId:        'view-defence',
+    prefix:        'dt',
+    winColumn:     'DEF_Win',
+    winAliases:    ['defwin', 'defwins', 'defencewin', 'defencewins', 'defensewin', 'defensewins', 'wins', 'win'],
+    winNoun:       'defence win',
+    winNounPlural: 'defence wins',
+    winStat:       'Defence wins'
+  });
+
+  global.EtheriaAttack = createBoard({
+    configKey:     'attack',
+    defaultPath:   'data/atk_stat.xlsx',
+    viewId:        'view-attack',
+    prefix:        'at',
+    winColumn:     'ATK_Win',
+    winAliases:    ['atkwin', 'atkwins', 'attackwin', 'attackwins', 'wins', 'win'],
+    winNoun:       'attack win',
+    winNounPlural: 'attack wins',
+    winStat:       'Attack wins'
+  });
 
 })(window);

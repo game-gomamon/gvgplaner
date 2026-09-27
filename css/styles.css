@@ -579,23 +579,31 @@ tr[data-squad="1"] .col-rank { border-left-style: dashed; }
 }
 
 /* =========================================================
-   Defence teams — the Defence Team tab.
+   Defence teams — the Defence Team and Attack Team tabs.
 
-   Scoped to #view-defence so it cannot reach the tables.
+   Scoped to #view-defence / #view-attack so it cannot reach the tables.
    Reuses .stat, .panel, .empty, .boot__bars and .tag from above,
    so the tab reads as part of the same ledger.
    ========================================================= */
 
-/* Four states, swapped by the [data-state] attribute js/defence.js sets. */
-#view-defence [data-when] { display: none; }
+/* Four states, swapped by the [data-state] attribute js/defence.js sets.
+   The Attack Team tab (#view-attack) is the same board, so it shares all of it. */
+#view-defence [data-when],
+#view-attack  [data-when] { display: none; }
 #view-defence[data-state="loading"] [data-when="loading"],
 #view-defence[data-state="error"]   [data-when="error"],
 #view-defence[data-state="empty"]   [data-when="empty"],
-#view-defence[data-state="ready"]   [data-when="ready"] { display: block; }
+#view-defence[data-state="ready"]   [data-when="ready"],
+#view-attack[data-state="loading"]  [data-when="loading"],
+#view-attack[data-state="error"]    [data-when="error"],
+#view-attack[data-state="empty"]    [data-when="empty"],
+#view-attack[data-state="ready"]    [data-when="ready"] { display: block; }
 
-#view-defence .dt-boot { padding: 56px 0; text-align: center; }
+#view-defence .dt-boot,
+#view-attack  .dt-boot { padding: 56px 0; text-align: center; }
 
-#view-defence code {
+#view-defence code,
+#view-attack  code {
   font-family: var(--font-data); font-size: 12.5px;
   background: var(--ink); padding: 1px 5px; border-radius: 3px; color: var(--brass);
 }
