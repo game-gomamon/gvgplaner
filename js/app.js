@@ -640,6 +640,20 @@
   var STATS_VIEWS = ['dashboard', 'overall', 'players', 'player', 'history'];
   var STANDALONE_VIEWS = ['planner', 'defence', 'attack'];
 
+  /* Starts a Defence/Attack board. If js/defence.js did not define it —
+     usually a stale cached copy from before the Attack tab existed — the tab
+     used to sit on "Reading…" forever. Now it says what is wrong. */
+  function bootBoard(globalName, view, prefix) {
+    var board = window[globalName];
+    if (board && typeof board.init === 'function') { board.init(); return; }
+    var sec = $('view-' + view);
+    if (sec) sec.setAttribute('data-state', 'error');
+    var body = $(prefix + 'ErrorBody');
+    if (body) body.innerHTML = '<p class="panel__note">The browser is running an old copy of <code>js/defence.js</code> ' +
+      'that has no ' + esc(view) + ' board. Push the latest <code>js/defence.js</code>, then hard-refresh ' +
+      '(<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>, or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> on Mac).</p>';
+  }
+
   function defaultView() {
     var want = (CFG && CFG.defaultView) || 'dashboard';
     return VIEWS.indexOf(want) === -1 || want === 'player' ? 'dashboard' : want;
@@ -673,8 +687,8 @@
       $('boot').hidden = true;
       // Both boot on first visit; the planner also re-measures its labels.
       if (view === 'planner' && window.UFPlanner) window.UFPlanner.init();
-      if (view === 'defence' && window.EtheriaDefence) window.EtheriaDefence.init();
-      if (view === 'attack' && window.EtheriaAttack) window.EtheriaAttack.init();
+      if (view === 'defence') bootBoard('EtheriaDefence', 'defence', 'dt');
+      if (view === 'attack')  bootBoard('EtheriaAttack',  'attack',  'at');
       window.scrollTo({ top: 0, behavior: 'auto' });
       return;
     }

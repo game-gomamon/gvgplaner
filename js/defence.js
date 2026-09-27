@@ -35,9 +35,18 @@
     DCFG[k] = OWN[k] !== undefined ? OWN[k] : BASE[k];
   });
   DCFG.bustCache = OWN.bustCache;
-  DCFG.dataPath = OWN.dataPath || opts.defaultPath;
 
-  var DATA_PATH = DCFG.dataPath;
+  /* Candidate paths, tried in order until one answers. dataPath (a single
+     string) still works; dataPaths (a list) adds fallbacks, so a renamed or
+     misplaced workbook is still found instead of the tab failing outright.
+     GitHub Pages is case-sensitive, which is the usual reason a file that
+     is plainly in the repo still 404s. */
+  var PATHS = [];
+  [].concat(OWN.dataPath || [], OWN.dataPaths || [], opts.defaultPaths || []).forEach(function (p) {
+    if (p && PATHS.indexOf(p) === -1) PATHS.push(p);
+  });
+
+  var DATA_PATH = PATHS[0];                 // replaced by whichever path loads
   var FILE = DATA_PATH.split('/').pop();   // e.g. def_stat.xlsx, for messages
   var P = opts.prefix;                      // element id prefix: dt / at
 
@@ -114,6 +123,31 @@
      Profile column are megabytes each — so the download is streamed
      and the tab reports progress rather than sitting blank.
      --------------------------------------------------------- */
+
+  /* Tries each candidate path; the first that loads wins. A 404 moves on
+     to the next path. Any other failure (network, server error) stops, since
+     another filename would not fix it. */
+  function fetchFirst(paths, onProgress) {
+    var tried = [];
+    function next(i) {
+      if (i >= paths.length) {
+        var err = new Error('Not found');
+        err.status = 404;
+        err.tried = tried;
+        return Promise.reject(err);
+      }
+      tried.push(paths[i]);
+      return fetchWorkbook(paths[i], onProgress).then(function (buf) {
+        DATA_PATH = paths[i];
+        FILE = DATA_PATH.split('/').pop();
+        return buf;
+      }, function (err) {
+        if (err && (err.status === 404 || err.status === 403)) return next(i + 1);
+        throw err;
+      });
+    }
+    return next(0);
+  }
 
   function fetchWorkbook(url, onProgress) {
     return fetch(bust(url), { cache: (DCFG.bustCache === undefined ? CFG.bustCache : DCFG.bustCache) ? 'no-store' : 'default' })
@@ -350,10 +384,21 @@
     };
 
     cache = Promise.all([
-      fetchWorkbook(DATA_PATH, reportProgress),
+      fetchFirst(PATHS, reportProgress),
       loadProfileIndex()
     ]).then(function (res) {
-      var wb = XLSX.read(new Uint8Array(res[0]), { type: 'array' });
+      var bytes = new Uint8Array(res[0]);
+      // An .xlsx is a zip and starts with "PK". Anything else is usually a
+      // Git LFS pointer, an HTML error page, or an Excel lock file (~$name.xlsx).
+      if (bytes.length < 4 || bytes[0] !== 0x50 || bytes[1] !== 0x4B) {
+        var head = new TextDecoder().decode(bytes.slice(0, 200));
+        var bad = new Error(/git-lfs/i.test(head)
+          ? FILE + ' on the server is a Git LFS pointer, not the workbook. Commit it as a normal file (git lfs untrack) and push again.'
+          : FILE + ' on the server is not an Excel workbook (' + bytes.length + ' bytes). Re-upload the real file.');
+        bad.readable = true;
+        throw bad;
+      }
+      var wb = XLSX.read(bytes, { type: 'array' });
       var index = res[1];
 
       var animusSheet = (DCFG.animusSheet || 'Animus');
@@ -638,7 +683,8 @@
     var path = DATA_PATH;
     var why;
     if (err && err.status === 404) {
-      why = 'No file at <code>' + esc(path) + '</code>. Check it is committed, and that the name matches exactly — GitHub Pages is case-sensitive.';
+      var tried = (err.tried || [path]).map(function (p) { return '<code>' + esc(p) + '</code>'; }).join(', ');
+      why = 'No workbook found. Tried ' + tried + '. Check it is committed, and that the name matches exactly — GitHub Pages is case-sensitive (<code>ATK_stat.xlsx</code> is not <code>atk_stat.xlsx</code>).';
     } else if (err instanceof TypeError) {
       why = 'The file could not be fetched. If you opened <code>index.html</code> straight from disk, run a local web server instead — browsers block <code>file://</code> reads.';
     } else {
@@ -695,7 +741,7 @@
 
   global.EtheriaDefence = createBoard({
     configKey:     'defence',
-    defaultPath:   'data/def_stat.xlsx',
+    defaultPaths:  ['data/def_stat.xlsx', 'data/team_stat.xlsx', 'def_stat.xlsx', 'team_stat.xlsx'],
     viewId:        'view-defence',
     prefix:        'dt',
     winColumn:     'DEF_Win',
@@ -707,7 +753,7 @@
 
   global.EtheriaAttack = createBoard({
     configKey:     'attack',
-    defaultPath:   'data/atk_stat.xlsx',
+    defaultPaths:  ['data/atk_stat.xlsx', 'data/ATK_stat.xlsx', 'data/Atk_stat.xlsx', 'data/attack_stat.xlsx', 'atk_stat.xlsx'],
     viewId:        'view-attack',
     prefix:        'at',
     winColumn:     'ATK_Win',

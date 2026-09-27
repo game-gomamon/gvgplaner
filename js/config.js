@@ -87,6 +87,9 @@ window.APP_CONFIG = {
        https://user.github.io/etheria-restart/. Never write '/data/...'. */
     dataPath: 'data/def_stat.xlsx',
 
+    /* Fallbacks, tried in order if dataPath is not found. */
+    dataPaths: ['data/team_stat.xlsx'],
+
     /* The sheet mapping each Animus to its portrait. */
     animusSheet: 'Animus',
 
@@ -132,6 +135,10 @@ window.APP_CONFIG = {
      ========================================================= */
   attack: {
     dataPath: 'data/atk_stat.xlsx',
+
+    /* Fallbacks, tried in order if dataPath is not found. GitHub Pages is
+       case-sensitive, so the common capitalisations are listed. */
+    dataPaths: ['data/ATK_stat.xlsx', 'data/Atk_stat.xlsx', 'data/attack_stat.xlsx', 'atk_stat.xlsx'],
 
     /* Same meaning as defence.bustCache. */
     bustCache: undefined
