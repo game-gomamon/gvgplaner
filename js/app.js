@@ -628,20 +628,20 @@
      Routing
      --------------------------------------------------------- */
 
-  /* 'planner' is the placement board; 'defence' and 'attack' each read
+  /* 'planner' is the placement board; 'defence' and 'opponent' each read
      their own workbook;
      the rest read master.xlsx and the weekly files. They share this router
      so the whole site is one page and one nav.
 
      STATS_VIEWS is the subset that needs those spreadsheets. Planner,
-     defence and attack are deliberately outside it, so a data failure cannot strand
+     defence and opponent are deliberately outside it, so a data failure cannot strand
      any of them. */
-  var VIEWS = ['planner', 'dashboard', 'overall', 'players', 'player', 'history', 'defence', 'attack'];
+  var VIEWS = ['planner', 'dashboard', 'overall', 'players', 'player', 'history', 'defence', 'opponent'];
   var STATS_VIEWS = ['dashboard', 'overall', 'players', 'player', 'history'];
-  var STANDALONE_VIEWS = ['planner', 'defence', 'attack'];
+  var STANDALONE_VIEWS = ['planner', 'defence', 'opponent'];
 
-  /* Starts a Defence/Attack board. If js/defence.js did not define it —
-     usually a stale cached copy from before the Attack tab existed — the tab
+  /* Starts a Defence/Opponent board. If js/defence.js did not define it —
+     usually a stale cached copy from before the Opponent tab existed — the tab
      used to sit on "Reading…" forever. Now it says what is wrong. */
   function bootBoard(globalName, view, prefix) {
     var board = window[globalName];
@@ -688,7 +688,7 @@
       // Both boot on first visit; the planner also re-measures its labels.
       if (view === 'planner' && window.UFPlanner) window.UFPlanner.init();
       if (view === 'defence') bootBoard('EtheriaDefence', 'defence', 'dt');
-      if (view === 'attack')  bootBoard('EtheriaAttack',  'attack',  'at');
+      if (view === 'opponent') bootBoard('EtheriaOpponent', 'opponent', 'op');
       window.scrollTo({ top: 0, behavior: 'auto' });
       return;
     }
@@ -808,7 +808,7 @@
     bindShell();
 
     /* The board reads Member.xlsx and the map image only, the defence
-       tab reads def_stat.xlsx and the attack tab atk_stat.xlsx only, so neither should sit behind the
+       tab reads def_stat.xlsx and the opponent tab opponent_team.xlsx only, so neither should sit behind the
        statistics load. Open one straight away when it is the landing tab;
        route() runs again once the data resolves. */
     var wanted = (location.hash.replace(/^#\/?/, '') || defaultView()).split('/')[0];

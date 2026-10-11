@@ -1,17 +1,19 @@
 /* =========================================================
-   defence.js — the Defence Team and Attack Team tabs.
+   defence.js — the Defence Team and Opponent Team tabs.
 
    One engine, two boards. Each reads its own workbook once, on the
    first visit to its tab, and answers one question: which
-   three-Animus teams win most?
+   three-Animus defence teams win most?
 
-     Defence Team  ->  data/def_stat.xlsx   (DEF_Win)  -> window.EtheriaDefence
-     Attack Team   ->  data/atk_stat.xlsx   (ATK_Win)  -> window.EtheriaAttack
+     Defence Team   ->  data/def_stat.xlsx       (DEF_Win) -> window.EtheriaDefence
+     Opponent Team  ->  data/opponent_team.xlsx  (Def_Win) -> window.EtheriaOpponent
 
    Both workbooks share the same layout: an "Animus" sheet plus one
    W-numbered sheet per week with Animus_A / Animus_B / Animus_C and
-   a win column. Everything that differs between the two tabs is in
-   the BOARDS table at the bottom of this file.
+   a win column. The opponent workbook adds an "Opponent_Team" sheet
+   naming who was faced each week, which retitles the tab to
+   "Strongest defence teams of <Team_name>". Everything that differs
+   between the two tabs is in the BOARDS table at the bottom of this file.
 
    Nothing here touches the statistics half of the site. If
    master.xlsx and the weekly files are missing, this tab still works,
@@ -48,7 +50,7 @@
 
   var DATA_PATH = PATHS[0];                 // replaced by whichever path loads
   var FILE = DATA_PATH.split('/').pop();   // e.g. def_stat.xlsx, for messages
-  var P = opts.prefix;                      // element id prefix: dt / at
+  var P = opts.prefix;                      // element id prefix: dt / op
 
   /* Sheets to treat as weekly data: "W" followed by digits, nothing else.
      W011, W12, W1 all qualify; "Animus", "Notes", "W1 draft" do not.
@@ -370,6 +372,51 @@
   }
 
   /* ---------------------------------------------------------
+     Opponent sheet -> week number -> { team, server }
+
+     Only the Opponent Team board sets opponentSheet. Rows are keyed by
+     week NUMBER, so "W19" on this sheet names the sheet called "W019".
+     A missing or unreadable sheet is a note, never a failure: the tab
+     simply falls back to the plain title.
+     --------------------------------------------------------- */
+
+  var OPPONENT_ALIASES = {
+    week:   ['data', 'week', 'weekid', 'sheet', 'w'],
+    team:   ['teamname', 'team', 'opponent', 'opponentteam', 'guild', 'guildname', 'name'],
+    server: ['server', 'region', 'realm']
+  };
+
+  function weekNum(name) {
+    var m = /^\s*W?0*(\d+)\s*$/i.exec(trim(name));
+    return m ? parseInt(m[1], 10) : NaN;
+  }
+
+  function parseOpponents(rows, stats) {
+    var found = mapColumns(rows, OPPONENT_ALIASES, ['week', 'team']);
+    var map = found.map;
+    var byNum = Object.create(null);
+
+    if (map.week === undefined || map.team === undefined) {
+      stats.notes.push('The ' + OWN.opponentSheet + ' sheet needs "Data" and "Team_name" columns, so opponent names are not shown.');
+      return byNum;
+    }
+
+    for (var r = found.headerRow + 1; r < rows.length; r++) {
+      var row = rows[r] || [];
+      var num = weekNum(cell(row, map, 'week'));
+      var team = trim(cell(row, map, 'team'));
+      if (isNaN(num) || !team || byNum[num]) continue;   // blanks, notes, duplicates
+      byNum[num] = { team: team, server: trim(cell(row, map, 'server')) };
+    }
+    return byNum;
+  }
+
+  function opponentOf(data, sheet) {
+    var opp = data.stats.opponents;
+    return opp ? (opp[weekNum(sheet)] || null) : null;
+  }
+
+  /* ---------------------------------------------------------
      Load + build, once
      --------------------------------------------------------- */
 
@@ -420,6 +467,17 @@
         });
 
       stats.weekSheets = weekNames;
+
+      // Opponent Team board only: who was faced on each weekly sheet.
+      if (OWN.opponentSheet) {
+        var actualOpp = wb.SheetNames.filter(function (n) { return normKey(n) === normKey(OWN.opponentSheet); })[0];
+        if (actualOpp) {
+          stats.opponents = parseOpponents(sheetRows(wb, actualOpp), stats);
+        } else {
+          stats.opponents = Object.create(null);
+          stats.notes.push('No "' + OWN.opponentSheet + '" sheet found, so opponent names are not shown.');
+        }
+      }
 
       var teams = new Map();
       weekNames.forEach(function (name) {
@@ -570,7 +628,8 @@
           return nb - na;
         })
         .map(function (w) {
-          return { id: w, label: w };
+          var opp = opponentOf(data, w);
+          return { id: w, label: opp ? w + ' · ' + opp.team : w };
         })
     );
 
@@ -590,8 +649,39 @@
   }
 
   /* Everything below the tab bar: the stat strip, the ranked list, the note. */
+  /* The Opponent Team board names who it is showing:
+       "Strongest defence teams of 火 Gokai". On Overall that is the one
+       opponent if every week faced the same guild, otherwise all of them.
+       The Defence Team board has no titleBase and is left alone. */
+  function paintHeading(data) {
+    if (!opts.titleBase) return;
+    var title = $(P + 'Title');
+    var eyebrow = $(P + 'Eyebrow');
+    var subject = '', server = '';
+
+    if (scope !== OVERALL) {
+      var opp = opponentOf(data, scope);
+      if (opp) { subject = opp.team; server = opp.server; }
+    } else {
+      var names = [], servers = [];
+      data.stats.weekSheets.forEach(function (w) {
+        var o = opponentOf(data, w);
+        if (!o) return;
+        if (names.indexOf(o.team) === -1) names.push(o.team);
+        if (o.server && servers.indexOf(o.server) === -1) servers.push(o.server);
+      });
+      if (names.length === 1) subject = names[0];
+      else if (names.length > 1) subject = 'all opponents';
+      if (servers.length === 1) server = servers[0];
+    }
+
+    if (title) title.textContent = opts.titleBase + (subject ? ' of ' + subject : '');
+    if (eyebrow) eyebrow.textContent = opts.eyebrowBase + (server ? ' · ' + server : '');
+  }
+
   function paint(data) {
     var stats = data.stats;
+    paintHeading(data);
     var teams = teamsFor(data, scope);
     var isWeek = scope !== OVERALL;
     var totalWins = teams.reduce(function (n, t) { return n + t.wins; }, 0);
@@ -684,7 +774,7 @@
     var why;
     if (err && err.status === 404) {
       var tried = (err.tried || [path]).map(function (p) { return '<code>' + esc(p) + '</code>'; }).join(', ');
-      why = 'No workbook found. Tried ' + tried + '. Check it is committed, and that the name matches exactly — GitHub Pages is case-sensitive (<code>ATK_stat.xlsx</code> is not <code>atk_stat.xlsx</code>).';
+      why = 'No workbook found. Tried ' + tried + '. Check it is committed, and that the name matches exactly — GitHub Pages is case-sensitive (<code>Opponent_team.xlsx</code> is not <code>opponent_team.xlsx</code>).';
     } else if (err instanceof TypeError) {
       why = 'The file could not be fetched. If you opened <code>index.html</code> straight from disk, run a local web server instead — browsers block <code>file://</code> reads.';
     } else {
@@ -751,16 +841,18 @@
     winStat:       'Defence wins'
   });
 
-  global.EtheriaAttack = createBoard({
-    configKey:     'attack',
-    defaultPaths:  ['data/atk_stat.xlsx', 'data/ATK_stat.xlsx', 'data/Atk_stat.xlsx', 'data/attack_stat.xlsx', 'atk_stat.xlsx'],
-    viewId:        'view-attack',
-    prefix:        'at',
-    winColumn:     'ATK_Win',
-    winAliases:    ['atkwin', 'atkwins', 'attackwin', 'attackwins', 'wins', 'win'],
-    winNoun:       'attack win',
-    winNounPlural: 'attack wins',
-    winStat:       'Attack wins'
+  global.EtheriaOpponent = createBoard({
+    configKey:     'opponent',
+    defaultPaths:  ['data/opponent_team.xlsx', 'data/Opponent_team.xlsx', 'data/Opponent_Team.xlsx', 'opponent_team.xlsx'],
+    viewId:        'view-opponent',
+    prefix:        'op',
+    winColumn:     'Def_Win',
+    winAliases:    ['defwin', 'defwins', 'defencewin', 'defencewins', 'defensewin', 'defensewins', 'wins', 'win'],
+    winNoun:       'defence win',
+    winNounPlural: 'defence wins',
+    winStat:       'Defence wins',
+    titleBase:     'Strongest defence teams',
+    eyebrowBase:   'Opponent'
   });
 
 })(window);

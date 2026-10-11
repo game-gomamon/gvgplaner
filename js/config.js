@@ -72,7 +72,7 @@ window.APP_CONFIG = {
   bustCache: true,
 
   /* Which tab opens when someone lands on the site with no #hash.
-     One of: planner, dashboard, overall, players, history, defence, attack. */
+     One of: planner, dashboard, overall, players, history, defence, opponent. */
   defaultView: 'planner',
 
   /* =========================================================
@@ -123,22 +123,34 @@ window.APP_CONFIG = {
   },
 
   /* =========================================================
-     ATTACK TEAM
-     The same board as DEFENCE TEAM, read from its own workbook
-     and ranked by ATK_Win instead of DEF_Win. Same layout: an
-     "Animus" sheet plus W-numbered weekly sheets with
-     Animus_A / Animus_B / Animus_C / ATK_Win.
+     OPPONENT TEAM
+     The same board as DEFENCE TEAM, but for the guild we faced:
+     the strongest defence teams of the opponent, read from its own
+     workbook. Same layout: an "Animus" sheet plus W-numbered weekly
+     sheets with Animus_A / Animus_B / Animus_C / Def_Win.
+
+     One extra sheet, "Opponent_Team", names who we faced each week:
+
+        Data | Team_name | Server
+        W019 | 火 Gokai  | Global
+
+     The tab title then reads "Strongest defence teams of 火 Gokai".
+     Weeks are matched by NUMBER, so a row written "W19" still names
+     the sheet called "W019".
 
      Anything not set here (animusSheet, weekSheetPattern and the
      three profile* settings) is taken from the defence block
      above, so both tabs share the portraits in assets/animus/.
      ========================================================= */
-  attack: {
-    dataPath: 'data/atk_stat.xlsx',
+  opponent: {
+    dataPath: 'data/opponent_team.xlsx',
 
     /* Fallbacks, tried in order if dataPath is not found. GitHub Pages is
        case-sensitive, so the common capitalisations are listed. */
-    dataPaths: ['data/ATK_stat.xlsx', 'data/Atk_stat.xlsx', 'data/attack_stat.xlsx', 'atk_stat.xlsx'],
+    dataPaths: ['data/Opponent_team.xlsx', 'data/Opponent_Team.xlsx', 'opponent_team.xlsx'],
+
+    /* The sheet that names the opponent for each week. */
+    opponentSheet: 'Opponent_Team',
 
     /* Same meaning as defence.bustCache. */
     bustCache: undefined

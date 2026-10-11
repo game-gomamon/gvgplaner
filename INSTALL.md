@@ -1,86 +1,75 @@
-# Defence Team + Attack Team tabs — install
+# Defence Team + Opponent Team tabs — install
 
 Copy these over your repo, keeping the same folder layout:
 
 ```
-index.html                      (replaces yours)
-js/config.js                    (replaces yours)
-js/app.js                       (replaces yours)
-js/defence.js                   (replaces yours — now drives both tabs)
-css/styles.css                  (replaces yours)
-scripts/extract-animus.mjs      (new)
-assets/animus/                  (new — unzip animus-portraits.zip at the repo root)
-data/def_stat.xlsx              (your old def_stat.xlsx, RENAMED)
-data/atk_stat.xlsx              (new — attack stats, ATK_Win column)
+index.html                      (replaces yours — Attack Team removed, Opponent Team added)
+js/config.js                    (replaces yours — `attack` block removed, `opponent` block added)
+js/app.js                       (replaces yours — routes #/opponent instead of #/attack)
+js/defence.js                   (replaces yours — now drives Defence Team + Opponent Team)
+css/styles.css                  (replaces yours — #view-attack rules now #view-opponent)
+data/opponent_team.xlsx         (new — the opponent's defence stats)
 ```
 
-`css/planner.css`, `js/data.js`, `js/charts.js`, `js/planner.js` and
-`scripts/build-manifest.mjs` are untouched — keep your copies.
+Then **delete `data/atk_stat.xlsx`** from the repo — nothing reads it any more.
 
-`animus-portraits.zip` already contains the `assets/animus/` prefix, so
-unzipping it at the repo root puts the 79 portraits and `index.json` in the
-right place. Commit them.
+`css/planner.css`, `js/data.js`, `js/charts.js`, `js/planner.js`,
+`scripts/build-manifest.mjs` and `scripts/extract-animus.mjs` are untouched —
+keep your copies. `assets/animus/` is unchanged too; both tabs share it.
 
 ---
 
-## Attack Team tab
+## Opponent Team tab
 
-Same board as Defence Team, placed right after it in the nav, reading
-`data/atk_stat.xlsx`. Same sheet layout: an `Animus` sheet plus `W017`,
-`W018`… with `Animus_A`, `Animus_B`, `Animus_C`, `ATK_Win`. It reuses the
-portraits in `assets/animus/`, so nothing extra to extract. Path is set in
-`attack.dataPath` in `js/config.js`.
+Sits right after Defence Team in the nav. Same board, reading
+`data/opponent_team.xlsx`:
 
-`atk_stat.xlsx` also carries the in-cell Profile pictures (~5 MB), so the
-same "shrink the workbook" advice below applies to it.
+| Sheet           | Columns                                          |
+|-----------------|--------------------------------------------------|
+| `Animus`        | `Animus`, `Profile`                              |
+| `Opponent_Team` | `Data`, `Team_name`, `Server`                    |
+| `W019`, `W020`… | `Animus_A`, `Animus_B`, `Animus_C`, `Def_Win`    |
 
----
+The `Opponent_Team` sheet names who you faced each week. The tab title follows
+the week picked in the dropdown:
 
-## Re-running the portrait extractor
+- **One week** -> "Strongest defence teams of 火 Gokai", eyebrow "Opponent · Global"
+- **Overall** -> the opponent's name if every week was against the same guild,
+  otherwise "Strongest defence teams of all opponents"
 
-Only needed when the Animus sheet gains new entries or new pictures:
+The dropdown shows each week with its opponent: `W019 · 火 Gokai`.
 
-```
-node scripts/extract-animus.mjs
-```
+Weeks are matched by number, so a `W19` row still names the `W019` sheet. If
+the `Opponent_Team` sheet is missing, the tab still works and just shows the
+plain title.
 
-It reads `data/def_stat.xlsx`, writes `assets/animus/*.png` plus
-`assets/animus/index.json`, and deletes portraits for Animus that are no
-longer on the sheet. No npm install — it uses only Node built-ins.
+### Adding a week
 
-Adding a new **week** needs nothing at all: drop a `W014` sheet into the
-workbook, push, and the tab picks it up.
+1. Add a `W020` sheet with the opponent's teams and `Def_Win`.
+2. Add a row to `Opponent_Team`: `W020 | <their name> | <server>`.
+3. Push. Nothing else to change.
 
 ---
 
 ## Recommended: shrink the workbook
 
-`data/def_stat.xlsx` is 29.65 MB, and `bustCache: true` makes the browser
-re-download it on every visit. Almost all of that weight is the pictures in
-the `Profile` and `Card` columns.
+`opponent_team.xlsx` is about 5 MB because the `Animus` sheet carries the in-cell
+Profile pictures. The tab never reads them — portraits come from
+`assets/animus/` — so you can delete the `Profile` column from the `Animus`
+sheet (keep the `Animus` names column) and the file drops to a few KB.
 
-Once the portraits are extracted and committed, those columns are dead weight
-for the website:
-
-1. Run `node scripts/extract-animus.mjs` and commit `assets/animus/`.
-2. Open `data/def_stat.xlsx`, delete the `Profile` and `Card` columns on the
-   `Animus` sheet, save.
-3. Commit.
-
-Measured result: **29.65 MB -> 0.02 MB, with identical output on the tab.**
-Keep an unedited copy of the workbook somewhere if you still want the art in
-Excel.
-
-If you would rather leave the columns in place, set `defence.bustCache` to
-`false` in `js/config.js` so the browser at least caches the download.
+If an opponent uses an Animus that isn't in `assets/animus/` yet, add it to the
+`Animus` sheet of `data/def_stat.xlsx` with its picture and re-run
+`node scripts/extract-animus.mjs`. Until then that slot shows the Animus's
+initials.
 
 ---
 
 ## Notes
 
-- The tab reads `data/def_stat.xlsx` relative to `index.html`, so it works
-  under a GitHub Pages project URL such as
-  `https://user.github.io/etheria-restart/`.
-- It does not read `master.xlsx` or `data/weeks/`. If those fail to load the
-  Defence Team tab still works, exactly like the Planner tab.
-- The workbook is fetched once per page load, on the first visit to the tab.
+- Paths are relative to `index.html`, so it works under a GitHub Pages project
+  URL such as `https://user.github.io/etheria-restart/`.
+- GitHub Pages is case-sensitive: the file must be `data/opponent_team.xlsx`
+  (the tab also tries `Opponent_team.xlsx` and `Opponent_Team.xlsx`).
+- Script tags carry `?v=20261011`, so browsers pick up the new JS without a hard
+  refresh. Old `#/attack` bookmarks just land on the default tab.
